@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 
+// [수정] Props 인터페이스에 useSearch 상태 관련 추가 가능 (일단 내부 상태로 구현)
 interface WordPressProps {
   isDark: boolean;
   topic: string;
@@ -22,9 +23,12 @@ export default function WordPressContent({
   const tabs = ['글 생성', '개인설정', '카테고리 관리', '태그 최적화', '예약 발행'];
   const [activeTab, setActiveTab] = useState('글 생성');
 
+  // [추가] 실시간 검색 사용 여부 상태 (기본값: 항상 체크)
+  const [useSearch, setUseSearch] = useState(true);
+
   return (
     <div className="max-w-6xl mx-auto">
-      {/* 1. 상단 탭 메뉴 */}
+      {/* 1. 상단 탭 메뉴 (기존 유지) */}
       <div className={`flex items-center space-x-2 mb-10 p-1.5 rounded-2xl w-fit ${isDark ? 'bg-zinc-900/80' : 'bg-zinc-200'}`}>
         {tabs.map((tab) => (
           <button
@@ -61,6 +65,38 @@ export default function WordPressContent({
                 }`} 
                 placeholder="작성할 블로그 주제를 상세히 입력하세요..." 
               />
+            </div>
+
+            {/* [수정 부분] 실시간 구글 검색 체크박스 (V자 아이콘 추가 버전) */}
+<div className="flex items-center gap-3 px-1 -mt-4">
+  <label className="relative flex items-center cursor-pointer group">
+    <input 
+      type="checkbox" 
+      checked={useSearch}
+      onChange={(e) => setUseSearch(e.target.checked)}
+      className="sr-only peer" 
+    />
+    {/* V자 모양을 담을 박스 */}
+    <div className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center
+      ${isDark 
+        ? 'bg-black border-zinc-700 peer-checked:bg-blue-600 peer-checked:border-blue-600' 
+        : 'bg-white border-zinc-300 peer-checked:bg-blue-600 peer-checked:border-blue-600'}`}>
+      
+      {/* 🌟 V자 아이콘 (SVG 추가) - 체크되었을 때만 opacity-100으로 나타남 */}
+      <svg 
+        className={`w-3.5 h-3.5 text-white transition-opacity duration-200 ${useSearch ? 'opacity-100' : 'opacity-0'}`} 
+        fill="none" 
+        stroke="currentColor" 
+        viewBox="0 0 24 24" 
+        strokeWidth="4" // 선 두께를 굵게 해서 V자가 잘 보이게 설정
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+                <span className={`ml-3 text-sm font-bold transition-colors ${isDark ? 'text-zinc-400 group-hover:text-zinc-200' : 'text-zinc-600'}`}>
+                  🔍 최신 정보 팩트체크 활성화 (실시간 구글 검색 반영)
+                </span>
+              </label>
             </div>
 
             {/* 선택 박스 (옵션 3가지씩 복구 완료) */}

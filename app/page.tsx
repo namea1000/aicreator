@@ -1,14 +1,14 @@
-"use client";
-
+"use client"; // 반드시 맨 첫 줄에 있어야 합니다.
 import React, { useState, useEffect } from 'react';
 import WordPressContent from '@/components/writing/WordPressContent';
-// 구글 AI 라이브러리 유지
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Menu, X } from 'lucide-react'; // 사이드바 열고 닫는 아이콘
 
 type MainMenu = 'Writing' | 'Visuals' | 'Music' | 'Script' | 'Tools';
 
 export default function AIHubUnifiedPage() {
   const [activeMenu, setActiveMenu] = useState<MainMenu>('Writing');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // 모바일 사이드바 상태 추가
   const [activeSubMenu, setActiveSubMenu] = useState('워드프레스 글쓰기');
   const [theme, setTheme] = useState<'metallic' | 'dark'>('dark');
   const [apiKey, setApiKey] = useState("");
@@ -80,9 +80,18 @@ export default function AIHubUnifiedPage() {
     <div className={`flex h-screen w-full transition-colors duration-500 ${isDark ? 'bg-black text-white' : 'bg-[#e5e5e7] text-zinc-900'}`}>
       
       {/* 1. 왼쪽 사이드바 - 디자인 및 로직 완전 보존 */}
-      <aside className={`w-72 border-r flex flex-col h-full transition-colors duration-500 ${isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-300 bg-white'}`}>
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-72 border-r transition-transform duration-300 transform
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:relative lg:translate-x-0 
+        ${isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-300 bg-white'}
+      `}>
         <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
-          <div className="text-2xl font-black mb-8 italic tracking-tighter text-white">AI STUDIO</div>
+          <div className="flex items-center justify-between mb-8">
+            <div className="text-2xl font-black italic tracking-tighter">AI STUDIO</div>
+            {/* 모바일용 닫기 버튼 추가 */}
+            <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-zinc-500"><X size={24} /></button>
+          </div>
           
           <nav className="mb-10">
             <p className="text-[11px] font-black mb-5 uppercase tracking-[0.2em] text-blue-500/80 ml-2">{activeMenu} Focus</p>
@@ -144,20 +153,32 @@ export default function AIHubUnifiedPage() {
         </div>
       </aside>
 
-      {/* 2. 오른쪽 메인 영역 - 원본 구조 그대로 유지 */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <header className={`h-16 border-b flex items-center justify-between px-8 ${isDark ? 'border-zinc-800 bg-black' : 'border-zinc-300 bg-white'}`}>
-          <div className="flex space-x-8">
-            {(['Writing', 'Visuals', 'Music', 'Script', 'Tools'] as MainMenu[]).map((m) => (
-              <button key={m} onClick={() => setActiveMenu(m)} className={`text-sm font-black transition-all ${activeMenu === m ? 'text-blue-500' : 'text-zinc-500 hover:text-white'}`}>{m} Studio</button>
-            ))}
+      {/* 모바일 사이드바 열렸을 때 배경 어둡게 처리 [추가] */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
+      )}
+      {/* 2. 오른쪽 메인 영역 [수정] */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className={`h-16 border-b flex items-center justify-between px-4 lg:px-8 ${isDark ? 'border-zinc-800 bg-black' : 'border-zinc-300 bg-white'}`}>
+          <div className="flex items-center gap-4">
+            {/* 모바일 전용 햄버거 메뉴 버튼 [추가] */}
+            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-zinc-500 hover:text-blue-500 transition-colors">
+              <Menu size={24} />
+            </button>
+            <div className="flex space-x-4 lg:space-x-8 overflow-x-auto no-scrollbar whitespace-nowrap">
+              {(['Writing', 'Visuals', 'Music', 'Script', 'Tools'] as MainMenu[]).map((m) => (
+                <button key={m} onClick={() => setActiveMenu(m)} className={`text-sm font-black transition-all ${activeMenu === m ? 'text-blue-500' : 'text-zinc-500'}`}>{m}</button>
+              ))}
+            </div>
           </div>
-          <button onClick={() => setTheme(isDark ? 'metallic' : 'dark')} className={`px-4 py-1.5 rounded-full text-xs font-bold border ${isDark ? 'border-zinc-700 text-zinc-300' : 'border-zinc-300 text-zinc-800'}`}>
-            {isDark ? '✨ M4 Metallic' : '🌙 Deep Dark'}
+          {/* 테마 변경 버튼 (모바일에서는 아이콘만 보이게 처리 가능) */}
+          <button onClick={() => setTheme(isDark ? 'metallic' : 'dark')} className="flex-shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border border-zinc-700">
+             {isDark ? '✨' : '🌙'}
           </button>
         </header>
 
-        <section className="flex-1 overflow-y-auto p-10 bg-transparent">
+        {/* 메인 콘텐츠 영역 */}
+        <section className="flex-1 overflow-y-auto p-4 lg:p-10 bg-transparent">
           {activeMenu === 'Writing' ? (
             <>
               {activeSubMenu === '워드프레스 글쓰기' ? (
