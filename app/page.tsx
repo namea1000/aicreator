@@ -1,24 +1,25 @@
-"use client"; // 반드시 맨 첫 줄에 있어야 합니다.
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import WordPressContent from '@/components/writing/WordPressContent';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Menu, X } from 'lucide-react'; // 사이드바 열고 닫는 아이콘
+import { Menu, X } from 'lucide-react';
 
 type MainMenu = 'Writing' | 'Visuals' | 'Music' | 'Script' | 'Tools';
 
 export default function AIHubUnifiedPage() {
   const [activeMenu, setActiveMenu] = useState<MainMenu>('Writing');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // 모바일 사이드바 상태 추가
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeSubMenu, setActiveSubMenu] = useState('워드프레스 글쓰기');
   const [theme, setTheme] = useState<'metallic' | 'dark'>('dark');
   const [apiKey, setApiKey] = useState("");
   
-  // AI 연동을 위한 상태값들 유지
   const [topic, setTopic] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
+  const [useSearch, setUseSearch] = useState(true);
 
-  // 1. 브라우저 로딩 시 API 키 불러오기 로직 유지
+  // 1. 브라우저 로딩 시 API 키 불러오기
   useEffect(() => {
     const savedKey = localStorage.getItem("gemini_api_key");
     if (savedKey) {
@@ -26,42 +27,102 @@ export default function AIHubUnifiedPage() {
     }
   }, []);
 
-  // 2. API 키 저장 함수 유지
+  // 2. API 키 저장 함수
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newKey = e.target.value;
     setApiKey(newKey);
     localStorage.setItem("gemini_api_key", newKey);
   };
 
-  // 3. [핵심] 콘텐츠 생성 실행 함수 - 모델명만 사장님 지시대로 수정
+  // 3. 콘텐츠 생성 실행 함수 (실시간 검색 및 팩트체크 강화 버전)
   const handleGenerate = async () => {
-    if (!apiKey) return alert("왼쪽 하단에 Gemini API 키를 입력해주세요!");
+    if (!apiKey) return alert("Gemini API 키를 입력해주세요!");
     if (!topic) return alert("작성할 주제를 입력해주세요!");
 
     setLoading(true);
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      // 사장님 요청 모델명: gemini-3-flash-preview (수정완료)
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
       
-      const prompt = `당신은 전문 블로거입니다. 다음 주제에 대해 워드프레스에 최적화된(H1, H2 태그 포함) 한국어 블로그 글을 아주 상세하게 작성해주세요. 주제: ${topic}`;
-      
-      const result = await model.generateContent(prompt);
+      // ✅ 1. 사장님이 성공하신 모델명으로 고정
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-3-flash-preview" 
+      });
+
+      // ✅ 이제 이 코드가 매일매일 날짜를 갱신해줍니다.
+      const dateString = new Date().toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+});
+
+      // ✅ 2. AI에게 내리는 명확한 지시서 (프롬프트)
+      const prompt = `
+        [SYSTEM: REAL-TIME DATA ANALYSIS]
+        오늘 날짜는 ${dateString}입니다.
+
+        주제: "${topic}"
+
+        [작성 규칙]
+        1. '구글 검색' 도구를 사용하여 주제와 관련된 최신 뉴스 및 실제 수치(주가, 지표 등)를 확보하세요.
+        2. 주제인 "${topic}"에 대해 구글 검색을 수행하여 '현재 이 시각'의 실제 수치(주가, 가격, 뉴스, 정보 등)를 확인하세요.
+        3. 특히 주가나 통계 데이터는 검색 결과에 나온 수치를 정확하게 반영하세요.
+        4. 실시간 정보를 바탕으로 전문가 수준의 블로그 포스팅을 풍성한 내용으로 작성하세요.
+        5. 수치 데이터는 표(Table) 형식을 활용해 가독성 있게 배치하세요.
+        6. **핵심 소제목은 반드시 Markdown의 H2 태그(##)를 사용하여 작성하고, 최소 5가지 ~ 10가지 소제목으로 내용을 풍성하게 작성하세요.** 
+        8. 내용 전체적으로 열 구분선 --- 을 절대 넣지 마세요.  
+        7. 글 하단에는 참고한 정보의 출처(URL)를 명시하고, 명시한 출처 제목에 출처(URL) 하이퍼링크를 만들어서 클릭하면 바로갈 수 있도록 링크를 걸어주세요. 
+      `;
+
+      // ✅ 3. [가장 중요] tools 설정을 generateContent 함수의 두 번째 인자로 정확히 삽입
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        tools: [
+          { googleSearch: {} } as any, // 실시간 구글 검색 활성화
+        ],
+      });
+
       const response = await result.response;
       const text = response.text();
-      
-      setContent(text); 
-    } catch (error) {
+      setContent(text);
+
+    } catch (error: any) {
       console.error("AI 생성 에러:", error);
-      // 에러 메시지 보존
-      alert("AI 호출 중 에러가 발생했습니다. 키를 확인하거나 잠시 후 다시 시도해주세요.");
+      if (error.message.includes("503")) {
+        alert("구글 서버가 현재 너무 바쁩니다. 5초 뒤에 다시 시도해주세요!");
+      } else if (error.message.includes("403")) {
+        alert("API 키 권한 에러입니다. Google AI Studio에서 Billing 설정을 확인해주세요.");
+      } else {
+        alert("에러가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      }
     }
     setLoading(false);
+  }; // handleGenerate 함수 끝
+
+  // 1. 클립보드 복사 함수
+  const handleCopy = async () => {
+    if (!content) return alert("복사할 내용이 없습니다!");
+    try {
+      await navigator.clipboard.writeText(content);
+      alert("글이 클립보드에 복사되었습니다!");
+    } catch (err) {
+      console.error("복사 실패:", err);
+    }
+  };
+
+  // 2. TXT 파일 다운로드 함수
+  const handleDownload = () => {
+    if (!content) return alert("저장할 내용이 없습니다!");
+    const element = document.createElement("a");
+    const file = new Blob([content], { type: "text/plain" });
+    element.href = URL.createObjectURL(file);
+    element.download = `${topic || 'ai_content'}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
   };
 
   const isDark = theme === 'dark';
 
-  // 사이드바 메뉴 데이터 100% 보존
   const sidebarData = {
     Writing: ['워드프레스 글쓰기', '네이버 글쓰기', '뉴스 글쓰기', 'SNS 글쓰기', '광고 카피라이팅', '텍스트 변형/확장', 'AI 캐릭터 페르소나 설정기', 'SEO 최적화 메타 데이터'],
     Visuals: ['이미지 생성기', '비디오 생성기', '썸네일 생성기'],
@@ -78,18 +139,16 @@ export default function AIHubUnifiedPage() {
 
   return (
     <div className={`flex h-screen w-full transition-colors duration-500 ${isDark ? 'bg-black text-white' : 'bg-[#e5e5e7] text-zinc-900'}`}>
-      
-      {/* 1. 왼쪽 사이드바 - 디자인 및 로직 완전 보존 */}
+      {/* 1. 왼쪽 사이드바 */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-72 border-r transition-transform duration-300 transform
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:relative lg:translate-x-0 
+        lg:relative lg:translate-x-0
         ${isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-300 bg-white'}
       `}>
-        <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+        <div className="p-6 flex flex-col h-full overflow-y-auto custom-scrollbar">
           <div className="flex items-center justify-between mb-8">
             <div className="text-2xl font-black italic tracking-tighter">AI STUDIO</div>
-            {/* 모바일용 닫기 버튼 추가 */}
             <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-zinc-500"><X size={24} /></button>
           </div>
           
@@ -122,46 +181,44 @@ export default function AIHubUnifiedPage() {
               ))}
             </div>
           </nav>
-        </div>
 
-        <div className={`p-6 border-t ${isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'}`}>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">System Key</p>
-                {apiKey && <span className="text-[9px] text-green-500 font-bold">SAVED ✅</span>}
+          <div className={`mt-auto p-4 border-t ${isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'}`}>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">System Key</p>
+                  {apiKey && <span className="text-[9px] text-green-500 font-bold">SAVED ✅</span>}
+                </div>
+                <input 
+                  type="password" 
+                  value={apiKey}
+                  onChange={handleApiKeyChange}
+                  placeholder="Gemini API Key"
+                  className={`w-full p-2.5 text-[13px] font-bold rounded-xl border-2 outline-none transition-all ${
+                    isDark ? 'border-zinc-800 bg-black text-white focus:border-blue-600' : 'border-zinc-200 bg-white text-black focus:border-blue-400'
+                  }`}
+                />
               </div>
-              <input 
-                type="password" 
-                value={apiKey}
-                onChange={handleApiKeyChange}
-                placeholder="Gemini API Key"
-                className={`w-full p-2.5 text-[13px] font-bold rounded-xl border-2 outline-none transition-all ${
-                  isDark ? 'border-zinc-800 bg-black text-white focus:border-blue-600' : 'border-zinc-200 bg-white text-black focus:border-blue-400'
-                }`}
-              />
-            </div>
-
-            <div className={`flex items-center gap-3 p-3 rounded-2xl ${isDark ? 'bg-zinc-900 shadow-inner' : 'bg-zinc-50 border border-zinc-100'}`}>
-              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-md">N</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold truncate leading-none mb-1">namea1000</p>
-                <p className="text-[10px] text-zinc-500">Hobby Plan</p>
+              <div className={`flex items-center gap-3 p-3 rounded-2xl ${isDark ? 'bg-zinc-900' : 'bg-zinc-50 border border-zinc-100'}`}>
+                <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-md">N</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold truncate leading-none mb-1">namea1000</p>
+                  <p className="text-[10px] text-zinc-500">Hobby Plan</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* 모바일 사이드바 열렸을 때 배경 어둡게 처리 [추가] */}
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
-      {/* 2. 오른쪽 메인 영역 [수정] */}
+
+      {/* 2. 오른쪽 메인 영역 */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className={`h-16 border-b flex items-center justify-between px-4 lg:px-8 ${isDark ? 'border-zinc-800 bg-black' : 'border-zinc-300 bg-white'}`}>
           <div className="flex items-center gap-4">
-            {/* 모바일 전용 햄버거 메뉴 버튼 [추가] */}
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-zinc-500 hover:text-blue-500 transition-colors">
               <Menu size={24} />
             </button>
@@ -171,13 +228,11 @@ export default function AIHubUnifiedPage() {
               ))}
             </div>
           </div>
-          {/* 테마 변경 버튼 (모바일에서는 아이콘만 보이게 처리 가능) */}
           <button onClick={() => setTheme(isDark ? 'metallic' : 'dark')} className="flex-shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border border-zinc-700">
-             {isDark ? '✨' : '🌙'}
+             {isDark ? '✨ Metallic' : '🌙 Dark'}
           </button>
         </header>
 
-        {/* 메인 콘텐츠 영역 */}
         <section className="flex-1 overflow-y-auto p-4 lg:p-10 bg-transparent">
           {activeMenu === 'Writing' ? (
             <>
@@ -189,6 +244,10 @@ export default function AIHubUnifiedPage() {
                   handleGenerate={handleGenerate} 
                   loading={loading}
                   content={content}
+                  useSearch={useSearch}
+                  setUseSearch={setUseSearch}
+                  handleCopy={handleCopy}
+                  handleDownload={handleDownload}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full opacity-30 italic font-bold text-2xl">{activeSubMenu} 준비 중...</div>

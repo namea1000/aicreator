@@ -10,21 +10,27 @@ interface WordPressProps {
   handleGenerate: () => void;
   loading: boolean;
   content: string;
+  useSearch: boolean;
+  setUseSearch: (value: boolean) => void;
+  handleCopy: () => void;      // ✅ 검색결과 복사하기
+  handleDownload: () => void;  // ✅ 검색결과 다운로드
 }
 
+// 2. 컴포넌트 선언 부분 수정
 export default function WordPressContent({ 
   isDark, 
   topic, 
   setTopic, 
   handleGenerate, 
   loading, 
-  content 
+  content,
+  useSearch,    // 🌟 추가
+  setUseSearch,  // 🌟 추가
+  handleCopy, // ✅ 추가
+  handleDownload, // ✅ 추가
 }: WordPressProps) {
   const tabs = ['글 생성', '개인설정', '카테고리 관리', '태그 최적화', '예약 발행'];
   const [activeTab, setActiveTab] = useState('글 생성');
-
-  // [추가] 실시간 검색 사용 여부 상태 (기본값: 항상 체크)
-  const [useSearch, setUseSearch] = useState(true);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -146,13 +152,52 @@ export default function WordPressContent({
 
         {/* 생성 결과창 */}
         {content && (
-          <div className={`mt-10 p-10 rounded-[24px] border-2 whitespace-pre-wrap font-medium text-base leading-loose animate-in fade-in slide-in-from-bottom-4 duration-700 ${
+          <div className={`mt-10 p-10 rounded-[24px] border-2 animate-in fade-in slide-in-from-bottom-4 duration-700 ${
             isDark ? 'bg-black/40 border-zinc-800 text-zinc-200' : 'bg-zinc-50 border-zinc-200 text-black'
           }`}>
-            <div className="flex items-center gap-2 mb-6 border-b border-zinc-800/30 pb-4">
-              <span className="text-blue-500 font-black tracking-tighter">AI GENERATED CONTENT</span>
+            <div className="flex items-center justify-between mb-6 border-b border-zinc-800/30 pb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-blue-500 font-black tracking-tighter">AI GENERATED CONTENT</span>
+              </div>
+              
+              {/* ✅ 버튼 그룹 수정 버전 */}
+<div className="flex gap-2">
+  {/* 복사하기 버튼 */}
+  <button 
+    onClick={() => {
+      console.log("복사 버튼 클릭됨"); // 테스트용 로그
+      handleCopy();
+    }}
+    className={`px-4 py-2 text-xs font-bold rounded-xl transition-all border flex items-center gap-2 ${
+      isDark 
+        ? 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800' 
+        : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 shadow-sm'
+    }`}
+  >
+    📋 복사하기
+  </button>
+
+  {/* TXT 저장 버튼 */}
+  <button 
+    onClick={() => {
+      console.log("저장 버튼 클릭됨"); // 테스트용 로그
+      handleDownload();
+    }}
+    className={`px-4 py-2 text-xs font-bold rounded-xl transition-all border flex items-center gap-2 ${
+      isDark 
+        ? 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800' 
+        : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 shadow-sm'
+    }`}
+  >
+    💾 TXT 저장
+  </button>
+</div>
             </div>
-            {content}
+            
+            {/* 글 본문 영역 */}
+            <div className="whitespace-pre-wrap font-medium text-base leading-loose">
+              {content}
+            </div>
           </div>
         )}
       </div>
