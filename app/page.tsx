@@ -18,6 +18,8 @@ export default function AIHubUnifiedPage() {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [useSearch, setUseSearch] = useState(true);
+  const [tone, setTone] = useState("전문적이고 분석적인 말투 (경제, 기술, 정보전달)");
+  const [length, setLength] = useState("보통 (약 1,500자): 표준 블로그형 (일반적인 정보성 포스팅)");
 
   // 1. 브라우저 로딩 시 API 키 불러오기
   useEffect(() => {
@@ -57,21 +59,20 @@ export default function AIHubUnifiedPage() {
 
       // ✅ 2. AI에게 내리는 명확한 지시서 (프롬프트)
       const prompt = `
-        [SYSTEM: REAL-TIME DATA ANALYSIS]
-        오늘 날짜는 ${dateString}입니다.
-
-        주제: "${topic}"
+      [SYSTEM: PROFESSIONAL CONTENT CREATOR]
+      오늘 날짜는 ${dateString}입니다.
+      
+      주제: "${topic}"
+      **지정된 말투: "${tone}"**  // 👈 selectedTone 대신 이미 정의된 tone 사용
+      **지정된 길이: "${length}"** // 👈 selectedLength 대신 이미 정의된 length 사용
 
         [작성 규칙]
-        1. '구글 검색' 도구를 사용하여 주제와 관련된 최신 뉴스 및 실제 수치(주가, 지표 등)를 확보하세요.
-        2. 주제인 "${topic}"에 대해 구글 검색을 수행하여 '현재 이 시각'의 실제 수치(주가, 가격, 뉴스, 정보 등)를 확인하세요.
-        3. 특히 주가나 통계 데이터는 검색 결과에 나온 수치를 정확하게 반영하세요.
-        4. 실시간 정보를 바탕으로 전문가 수준의 블로그 포스팅을 풍성한 내용으로 작성하세요.
-        5. 수치 데이터는 표(Table) 형식을 활용해 가독성 있게 배치하세요.
-        6.Title 은 "${topic}" 의 SEO 에 최적화된 Title 로 작성하세요. 
-        7. **핵심 소제목은 반드시 Markdown의 H2 태그(##)를 사용하여 작성하고, 최소 5가지 ~ 10가지 소제목으로 내용을 풍성하게 작성하세요.** 
-        8. 내용 전체적으로 열 구분선 --- 을 절대 넣지 마세요.  
-        9. 글 하단에는 참고한 정보의 출처(URL)를 명시하고, 명시한 출처 제목에 출처(URL) 하이퍼링크를 만들어서 클릭하면 바로갈 수 있도록 링크를 걸어주세요. 
+        1. 반드시 **지정된 말투(${tone})**의 특성을 살려 전체 문장을 구성하세요.
+        2. **지정된 길이(${length})**에 맞춰서 정보의 깊이와 양을 조절하세요.
+        3. **SEO 최적화**: Title은 "${topic}" 키워드를 포함한 SEO 최적화 제목으로 작성하고, 모든 핵심 소제목은 반드시 Markdown H2(##) 태그를 사용하세요.
+        4. **실시간 데이터**: 구글 검색 도구로 현재 시점의 실제 수치(주가, 지표, 뉴스)를 확보하여 정확하게 반영하세요. 수치는 표(Table) 형식을 활용하세요.
+        5. **하이퍼링크 출처**: 글 하단 '참고 자료 출처'는 반드시 [뉴스 제목/출처](URL 주소) 마크다운 형식을 사용하여 클릭 시 바로 연결되게 작성하세요.
+        6. **포맷팅**: 내용 전체적으로 구분선(---)을 절대 사용하지 마세요.
       `;
 
       // ✅ 3. [가장 중요] tools 설정을 generateContent 함수의 두 번째 인자로 정확히 삽입
@@ -249,6 +250,10 @@ export default function AIHubUnifiedPage() {
                   setUseSearch={setUseSearch}
                   handleCopy={handleCopy}
                   handleDownload={handleDownload}
+                  tone={tone}
+                  setTone={setTone}
+                  length={length}
+                  setLength={setLength}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full opacity-30 italic font-bold text-2xl">{activeSubMenu} 준비 중...</div>

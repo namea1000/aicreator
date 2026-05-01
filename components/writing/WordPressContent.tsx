@@ -14,6 +14,10 @@ interface WordPressProps {
   setUseSearch: (value: boolean) => void;
   handleCopy: () => void;      // ✅ 검색결과 복사하기
   handleDownload: () => void;  // ✅ 검색결과 다운로드
+  tone: string;
+  setTone: (val: string) => void;
+  length: string;
+  setLength: (val: string) => void;
 }
 
 // 2. 컴포넌트 선언 부분 수정
@@ -28,6 +32,10 @@ export default function WordPressContent({
   setUseSearch,  // 🌟 추가
   handleCopy, // ✅ 추가
   handleDownload, // ✅ 추가
+  tone,
+  setTone,
+  length,
+  setLength
 }: WordPressProps) {
   const tabs = ['글 생성', '개인설정', '카테고리 관리', '태그 최적화', '예약 발행'];
   const [activeTab, setActiveTab] = useState('글 생성');
@@ -105,25 +113,48 @@ export default function WordPressContent({
               </label>
             </div>
 
-            {/* 선택 박스 (옵션 3가지씩 복구 완료) */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="text-[11px] font-black text-zinc-500 uppercase tracking-widest block mb-3 ml-1">글의 말투 (Tone)</label>
-                <select className={`w-full border-2 rounded-2xl p-4 text-sm font-bold appearance-none cursor-pointer ${isDark ? 'bg-black border-zinc-800 text-white' : 'bg-white border-zinc-200 text-black'}`}>
-                  <option>친근하고 부드러운 말투</option>
-                  <option>전문적이고 분석적인 말투</option>
-                  <option>익살스럽고 재치있는 말투</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[11px] font-black text-zinc-500 uppercase tracking-widest block mb-3 ml-1">글 길이 (Length)</label>
-                <select className={`w-full border-2 rounded-2xl p-4 text-sm font-bold appearance-none cursor-pointer ${isDark ? 'bg-black border-zinc-800 text-white' : 'bg-white border-zinc-200 text-black'}`}>
-                  <option>짧게 (약 800자)</option>
-                  <option>보통 (약 1,500자)</option>
-                  <option>길게 (약 3,000자 이상)</option>
-                </select>
-              </div>
-            </div>
+            {/* 선택 박스 영역 (말투와 길이) */}
+<div className="grid grid-cols-2 gap-6">
+  {/* 1. 글의 말투 선택 */}
+  <div>
+    <label className="text-[11px] font-black text-zinc-500 uppercase tracking-widest block mb-3 ml-1">
+      글의 말투 (Tone)
+    </label>
+    <select 
+      value={tone} // 👈 page.tsx에서 내려준 현재 상태값
+      onChange={(e) => setTone(e.target.value)} // 👈 바뀔 때마다 부모에게 알려줌
+      className={`w-full border-2 rounded-2xl p-4 text-sm font-bold appearance-none cursor-pointer ${
+        isDark ? 'bg-black border-zinc-800 text-white' : 'bg-white border-zinc-200 text-black'
+      }`}
+    >
+      <option>친근하고 부드러운 말투 (블로그 후기, 일상)</option>
+      <option>전문적이고 분석적인 말투 (경제, 기술, 정보전달)</option>
+      <option>익살스럽고 재치있는 말투 (커뮤니티, SNS, 유머)</option>
+      <option>비판적이고 날카로운 말투 (팩트체크, 비교 리뷰)</option>
+      <option>감성적이고 따뜻한 말투 (에세이, 여행, 맛집)</option>
+      <option>자신감 있고 설득력 있는 말투 (재테크, 투자 전망)</option>
+    </select>
+  </div>
+
+  {/* 2. 글 길이 선택 */}
+  <div>
+    <label className="text-[11px] font-black text-zinc-500 uppercase tracking-widest block mb-3 ml-1">
+      글 길이 (Length)
+    </label>
+    <select 
+      value={length} // 👈 page.tsx에서 내려준 현재 상태값
+      onChange={(e) => setLength(e.target.value)} // 👈 바뀔 때마다 부모에게 알려줌
+      className={`w-full border-2 rounded-2xl p-4 text-sm font-bold appearance-none cursor-pointer ${
+        isDark ? 'bg-black border-zinc-800 text-white' : 'bg-white border-zinc-200 text-black'
+      }`}
+    >
+      <option>짧게 (약 800자): 핵심 요약형 (뉴스 요약, 빠른 정보 전달)</option>
+      <option>보통 (약 1,500자): 표준 블로그형 (일반적인 정보성 포스팅)</option>
+      <option>길게 (약 3,000자): 심층 분석형 (SEO 상위 노출 공략용)</option>
+      <option>아주 길게 (약 5,000자): 가이드북/칼럼형 (하나의 주제를 완벽 정복)</option>
+    </select>
+  </div>
+</div>
           </div>
 
           {/* 오른쪽 버튼 영역 */}
