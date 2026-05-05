@@ -1,15 +1,20 @@
 'use client';
 
 import { supabase } from '@/lib/supabase';
-import { Globe } from 'lucide-react'; // 아이콘 라이브러리
+import { Globe } from 'lucide-react';
 
 export default function LoginPage() {
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // 로그인이 끝나면 유저를 보낼 주소 (배포 후엔 실제 도메인으로 변경)
+        // 1. 서버 엔진(callback)으로만 깔끔하게 보냅니다.
         redirectTo: `${window.location.origin}/auth/callback`,
+        // 2. 구글 인증 시 오프라인 액세스와 동의 화면을 강제해 세션 생성을 돕습니다.
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     });
 
