@@ -8,8 +8,8 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // 1. 서버 엔진(callback)으로만 깔끔하게 보냅니다.
-        redirectTo: `${window.location.origin}/auth/callback`,
+        // 1. 임시 주소가 아닌, 사장님의 진짜 도메인으로 고정하세요!
+        redirectTo: 'https://gentoolbox.vercel.app/auth/callback',
         // 2. 구글 인증 시 오프라인 액세스와 동의 화면을 강제해 세션 생성을 돕습니다.
         queryParams: {
           access_type: 'offline',
