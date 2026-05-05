@@ -22,8 +22,8 @@ export default function LoginPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#05070a]">
       <div className="p-10 bg-slate-900/50 border border-slate-800 rounded-3xl shadow-2xl text-center">
-        <h1 className="text-3xl font-black text-white mb-2 italic tracking-tighter">CREBOX.AI</h1>
-        <p className="text-slate-400 text-sm mb-8">당신의 데이터를 자산으로 만드는 시작</p>
+        <h1 className="text-3xl font-black text-white mb-2 italic tracking-tighter">Crebox.AI</h1>
+        <p className="text-slate-400 text-sm mb-8">The Creator's AI Toolbox</p>
         
         <button
           onClick={handleGoogleLogin}
