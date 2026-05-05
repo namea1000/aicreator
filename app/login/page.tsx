@@ -9,7 +9,7 @@ export default function LoginPage() {
       provider: 'google',
       options: {
         // 로그인이 끝나면 유저를 보낼 주소 (배포 후엔 실제 도메인으로 변경)
-        redirectTo: `${window.location.origin}`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
       },
     });
 
