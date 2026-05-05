@@ -8,15 +8,15 @@ export async function GET(request: Request) {
   const next = '/onboarding'
 
   if (code) {
-    // 우리가 방금 만든 server.ts의 엔진을 빌려옵니다.
     const supabase = await createClient()
-    
-    // 구글이 준 코드를 세션(쿠키)으로 바꿉니다.
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
+    
+    // 에러가 있다면 주소창에 에러 내용을 직접 띄웁니다.
+    return NextResponse.redirect(`${origin}/login?error_msg=${encodeURIComponent(error.message)}`)
   }
 
   // 에러 발생 시 로그인 페이지로 리다이렉트
