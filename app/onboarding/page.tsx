@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link'; // 1. Link 컴포넌트 추가
 
 export default function OnboardingPage() {
   return (
@@ -20,12 +21,18 @@ export default function OnboardingPage() {
           <h2 className="text-xl font-semibold mb-6">콘텐츠 제작 스튜디오 준비</h2>
           
           <div className="space-y-4">
-            <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]">
-              AI 글 생성기 시작하기
-            </button>
-            <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all">
-              대시보드 둘러보기
-            </button>
+            {/* 2. Link로 감싸서 루트(/) 경로로 연결 */}
+            <Link href="/">
+              <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]">
+                AI 글 생성기 시작하기
+              </button>
+            </Link>
+            
+            <Link href="/">
+              <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all">
+                대시보드 둘러보기
+              </button>
+            </Link>
           </div>
         </div>
 
