@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+// ✅ 경로 수정: components가 src 안으로 들어갔으므로 이제 올바르게 인식됩니다.
 import StudioLayout from '@/components/layout/StudioLayout';
 import { ChevronDown, User as UserIcon, Settings, LogOut, Sparkles, Zap, ArrowRight, MousePointer2 } from 'lucide-react';
+// ✅ 경로 수정: utils도 src 안으로 이동됨
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
 import Link from 'next/link';
@@ -49,9 +51,8 @@ export default function MainLandingPage() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col font-sans overflow-hidden">
       
-      {/* --- 전역 헤더 (사장님 원본 보존 + 로고 웅장화) --- */}
+      {/* --- 전역 헤더 --- */}
       <header className="h-25 border-b border-zinc-800/50 bg-black/80 backdrop-blur-md flex items-center px-12 z-[100] relative shrink-0">
-        {/* [왼쪽] 이미지 로고 영역 */}
         <div className="absolute left-10 h-full flex items-center">
           <div 
             className="flex items-center gap-5 cursor-pointer group transition-all duration-500 hover:brightness-125"
@@ -60,13 +61,10 @@ export default function MainLandingPage() {
               setStudioViewMode('Studio');
             }}
           >
-            {/* 로고 이미지 컨테이너 (h-50에 맞춰 시원하게 확장) */}
             <div className="relative w-50 h-50 overflow-visible flex items-center justify-center">
-              {/* 로고 뒤쪽 은은한 글로우 효과 */}
               <div className="absolute inset-0 bg-blue-500/15 rounded-full blur-3xl group-hover:bg-blue-500/30 transition-all duration-500" />
-              
               <Image 
-                src="/logobg.webp" // public 폴더에 투명 배경 WebP 또는 png 로고가 있어야 함
+                src="/logobg.webp" 
                 alt="Creaibox Logo"
                 fill
                 className="object-contain relative z-10 drop-shadow-[0_0_20px_rgba(59,130,246,0.6)] scale-110"
@@ -76,7 +74,6 @@ export default function MainLandingPage() {
           </div>
         </div>
         
-        {/* [중앙] 메뉴 영역 (사장님 원본 로직 유지 + ml 조정) */}
         <div className="flex-1 flex justify-center items-center">
           <nav className="flex space-x-12">
             {menuItems.map((item) => (
@@ -99,7 +96,6 @@ export default function MainLandingPage() {
           </nav>
         </div>
 
-        {/* [오른쪽] 사용자 영역 (사장님 원본 로직 유지) */}
         <div className="absolute right-8 h-full flex items-center gap-4">
           {user ? (
             <div className="relative" ref={dropdownRef}>
@@ -163,7 +159,6 @@ export default function MainLandingPage() {
           <StudioLayout activeMenu={activeMenu} initialViewMode={studioViewMode} />
         ) : (
           <div className="flex-1 overflow-y-auto bg-[#05070a] custom-scrollbar relative">
-            {/* 배경 블루 글로우 효과 */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-blue-600/10 rounded-full blur-[160px] pointer-events-none" />
 
             <div className="max-w-6xl mx-auto px-8 pt-20 pb-24 flex flex-col items-center relative z-10">
@@ -171,16 +166,13 @@ export default function MainLandingPage() {
                 <Sparkles size={14} /> All-in-One AI Creative Platform
               </div>
 
-              {/* 🌟 텍스트 대신 웅장한 히어로 로고 배치 */}
               <div className="relative mb-12 group cursor-default">
-                {/* 로고 뒤 배경 터지는 글로우 */}
                 <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-[100px] group-hover:bg-blue-500/30 transition-all duration-1000 scale-150" />
-                
                 <div className="relative overflow-visible">
                   <Image 
                     src="/logobg.webp" 
                     alt="Creaibox Hero Logo"
-                    width={750} // 텍스트 자리를 채우는 웅장한 사이즈
+                    width={750} 
                     height={280}
                     className="object-contain drop-shadow-[0_0_60px_rgba(59,130,246,0.6)] transition-transform duration-700 hover:scale-[1.03]"
                     priority
@@ -205,7 +197,6 @@ export default function MainLandingPage() {
                 </button>
               </div>
 
-              {/* 하단 POPULAR STUDIOS 섹션 (사장님 원본 유지) */}
               <div className="w-full text-left">
                 <div className="flex items-center justify-between mb-8 border-b border-zinc-800/50 pb-5">
                    <h3 className="text-2xl font-black italic uppercase tracking-tighter flex items-center gap-3">
@@ -225,8 +216,6 @@ export default function MainLandingPage() {
                       </div>
                       <h4 className="text-xl font-black mb-2 group-hover:text-blue-400 transition-colors uppercase italic tracking-tight">{item.label}</h4>
                       <p className="text-zinc-500 text-sm leading-relaxed font-medium opacity-80">{item.desc}</p>
-                      
-                      {/* 카드 하단 은은한 배경 효과 */}
                       <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all" />
                     </div>
                   ))}

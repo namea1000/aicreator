@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import WordPressContent from '@/components/writing/WordPressContent';
+import WordPressContent from '@/components/writing/wordpress/WordPressCenter';
 import APIVaultContent from '@/components/vault/APIVaultContent'; 
 import MyPageContent from '@/components/mypage/MyPageContent'; // ✅ 마이페이지 임포트 추가
 import { GoogleGenerativeAI } from "@google/generative-ai";

@@ -1,0 +1,77 @@
+"use client";
+
+import React, { useState } from 'react';
+import { PenLine, FileText, ImageIcon, ImagePlus, CalendarCheck, Settings2, Search, MessageSquare } from 'lucide-react';
+import CreateTab from './tabs/CreateTab';
+
+export default function WordPressCenter(props: any) {
+  // props에는 topic, content, handleGenerate 등이 들어있습니다.
+  const [activeTab, setActiveTab] = useState('create');
+
+  const tabs = [
+    { id: 'create', label: '글 생성', icon: PenLine },
+    { id: 'manage', label: '글 관리', icon: FileText },
+    { id: 'thumbnail', label: 'Ai 썸네일', icon: ImageIcon },
+    { id: 'image-insert', label: '이미지 삽입', icon: ImagePlus },
+    { id: 'publish', label: '예약 발행', icon: CalendarCheck },
+    { id: 'api-config', label: 'API 선택', icon: Settings2 },
+  ];
+
+  return (
+    <div className="flex h-full bg-[#05070a] overflow-hidden text-white font-sans">
+      {/* --- 메인 작업 영역 --- */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* 상단 탭 네비게이션 (사장님 원본 스타일 반영) */}
+        <div className="flex items-center px-6 bg-zinc-900/30 border-b border-zinc-800/50 shrink-0">
+          <div className="flex">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-6 py-5 text-sm font-bold transition-all relative ${
+                  activeTab === tab.id ? 'text-blue-500' : 'text-zinc-500 hover:text-white'
+                }`}
+              >
+                <tab.icon size={16} />
+                {tab.label}
+                {activeTab === tab.id && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 shadow-[0_-4px_12px_rgba(59,130,246,0.5)]" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 탭 콘텐츠 영역 */}
+        <div className="flex-1 overflow-hidden">
+          {activeTab === 'create' && <CreateTab {...props} />}
+          
+          {['manage', 'thumbnail', 'image-insert', 'publish', 'api-config'].includes(activeTab) && (
+            <div className="flex items-center justify-center h-full text-zinc-600 font-black italic uppercase tracking-widest">
+              {activeTab} Content Coming Soon...
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* --- 오른쪽 상시 고정 사이드바 --- */}
+      <div className="w-72 border-l border-zinc-800/50 bg-zinc-900/10 flex flex-col shrink-0">
+        <div className="p-5 border-b border-zinc-800/50">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
+            <input 
+              type="text" 
+              placeholder="검색 하기" 
+              className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-xl py-2.5 pl-9 pr-4 text-xs focus:outline-none focus:border-blue-500 transition-all text-zinc-300"
+            />
+          </div>
+        </div>
+        <div className="flex-1 p-5 flex flex-col gap-4">
+          <button className="flex items-center justify-center gap-3 px-4 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-2xl transition-all active:scale-95">
+            <MessageSquare size={18} /> AI CHATTING
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
