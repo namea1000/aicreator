@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Eye, X, PenLine, Sparkles, Loader2, Copy, FileText, Globe, MessageSquare, ListOrdered, MousePointer2, Zap, Plus, Share2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-
+import { supabase } from '@/lib/supabase';
 
 export default function CreateTab({ 
   topic, setTopic, handleGenerate, loading, content, setContent,
@@ -13,39 +13,67 @@ export default function CreateTab({
 }: any) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  const [isEditing, setIsEditing] = useState(false); // 편집 모드 여부
-  
-  const [progress, setProgress] = useState(0); // 진행률 상태 추가
-  
-  // 🌟 커서 위치 보존을 위한 Ref
+  // 🌟 [수정] DB에 저장하는 함수 (postType 등 변수 일치화)
+  const saveToSupabase = async (generatedContent: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error("로그인 세션이 없습니다.");
+        return;
+      }
+
+      const { error } = await supabase.from('posts').insert([
+        { 
+          user_email: user.email, 
+          title: topic,
+          content: generatedContent,
+          post_type: postType, // 현재 선택된 글 유형
+          tone: tone,
+          size: length,
+          status: '완료'
+        }
+      ]);
+
+      if (error) throw error;
+      console.log("DB 자동 저장 성공!");
+    } catch (err) {
+      console.error("DB 저장 실패:", err);
+    }
+  };
+
+  // 🌟 [핵심] AI 생성이 끝났을 때(loading이 true -> false가 될 때) 자동으로 저장 실행
+  useEffect(() => {
+    // 로딩이 끝나고(false), 본문(content)이 존재할 때만 저장 실행
+    if (!loading && content && content.length > 10) {
+      saveToSupabase(content);
+    }
+  }, [loading]); // 로딩 상태가 바뀔 때마다 체크
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [progress, setProgress] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // 진행률 게이지 로직 (사장님 원본 유지)
   React.useEffect(() => {
-  let interval: NodeJS.Timeout;
-
-  // 오직 '로딩 중'일 때만 게이지가 움직이게 합니다.
-  if (loading) {
-    setProgress(0);
-    interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) return 95;
-        const step = prev < 40 ? 5 : prev < 70 ? 2 : 0.5;
-        return Math.min(prev + step, 95);
-      });
-    }, 300);
-  } else {
-    // 🌟 로딩이 끝나면 더 이상 content 변화를 감시하지 않고 종료합니다.
-    // 이전에는 [loading, content]를 감시해서 수정할 때마다 여기가 실행됐던 게 문제!
-    if (content && progress < 100 && progress !== 0) {
-      setProgress(100);
-      setTimeout(() => setProgress(0), 2000);
+    let interval: NodeJS.Timeout;
+    if (loading) {
+      setProgress(0);
+      interval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 95) return 95;
+          const step = prev < 40 ? 5 : prev < 70 ? 2 : 0.5;
+          return Math.min(prev + step, 95);
+        });
+      }, 300);
+    } else {
+      if (content && progress < 100 && progress !== 0) {
+        setProgress(100);
+        setTimeout(() => setProgress(0), 2000);
+      }
     }
-  }
-
-  return () => clearInterval(interval);
-  // 🌟 의존성 배열에서 'content'를 제거합니다! 
-  // 그래야 글 수정(setContent)할 때 이 useEffect가 다시 실행 안 됩니다.
-}, [loading]);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const [postType, setPostType] = useState('생활 정책 및 정부 지원금');
 
@@ -70,12 +98,10 @@ export default function CreateTab({
 
   return (
     <div className="flex h-full divide-x divide-zinc-800/50 bg-[#05070a]">
-      
-      {/* --- [왼쪽] 스튜디오 컨트롤 타워 (45%) --- */}
+      {/* --- [왼쪽] 스튜디오 컨트롤 타워 --- */}
       <div className="w-[45%] flex flex-col h-full bg-[#05070a]">
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-4 pb-32">
           
-          {/* 1. Posting Topic / Keyword 박스 */}
           <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 shadow-sm space-y-3">
             <label className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
               <PenLine size={14} className="text-blue-500" /> Posting Topic / Keyword
@@ -88,7 +114,6 @@ export default function CreateTab({
             />
           </section>
 
-          {/* 2. 최신 정보 팩트체크 활성화 (그림처럼 단독 박스) */}
           <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
             <span className="text-[13px] font-black text-white">최신 정보 팩트체크 활성화</span>
             <div className="flex items-center gap-3">
@@ -102,19 +127,18 @@ export default function CreateTab({
             </div>
           </section>
 
-          {/* 3. 글 유형 (Type) 단독 박스 */}
-          <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 shadow-sm space-y-3">
-            <div className="flex justify-between items-center">
-              <label className="text-[13px] font-black text-white flex items-center gap-2">
+          <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 shadow-sm space-y-3 font-sans">
+            <div className="flex justify-between items-center font-sans">
+              <label className="text-[13px] font-black text-white flex items-center gap-2 font-sans">
                 글 유형 (Type)
               </label>
-              <Plus size={16} className="text-zinc-600" />
+              <Plus size={16} className="text-zinc-600 font-sans" />
             </div>
-            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 font-sans">
               <select 
                 value={postType} 
                 onChange={(e) => setPostType(e.target.value)}
-                className="w-full bg-transparent text-[11px] font-bold text-zinc-300 outline-none cursor-pointer appearance-none"
+                className="w-full bg-transparent text-[11px] font-bold text-zinc-300 outline-none cursor-pointer appearance-none font-sans"
               >
                 <optgroup label="1️⃣ 기본 및 도구"><option>AI 자동 포스팅</option><option>AI 툴 및 웹 서비스 가이드</option><option>유틸리티 (설치/방법)</option><option>일반 정보성 포스팅</option></optgroup>
                 <optgroup label="2️⃣ 수익형 핵심 (고단가)"><option>생활 정책 및 정부 지원금</option><option>금융 및 재테크</option><option>기업 정보 및 주식 정보</option><option>건강 정보 및 영양제 분석</option></optgroup>
@@ -123,11 +147,10 @@ export default function CreateTab({
             </div>
           </section>
 
-          {/* 4. 말투 (Tone) 단독 박스 */}
           <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 shadow-sm space-y-3 font-sans">
-            <label className="text-[13px] font-black text-white">말투 (Tone)</label>
-            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center">
-              <select value={tone} onChange={(e) => setTone(e.target.value)} className="w-full bg-transparent text-[11px] font-bold text-zinc-300 outline-none cursor-pointer appearance-none">
+            <label className="text-[13px] font-black text-white font-sans">말투 (Tone)</label>
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center font-sans">
+              <select value={tone} onChange={(e) => setTone(e.target.value)} className="w-full bg-transparent text-[11px] font-bold text-zinc-300 outline-none cursor-pointer appearance-none font-sans">
                 <option>친근하고 부드러운 말투 (블로그 후기, 일상)</option>
                 <option>전문적이고 분석적인 말투 (경제, 기술, 정보전달)</option>
                 <option>익살스럽고 재치있는 말투 (커뮤니티, SNS, 유머)</option>
@@ -135,65 +158,61 @@ export default function CreateTab({
                 <option>감성적이고 따뜻한 말투 (에세이, 여행, 맛집)</option>
                 <option>자신감 있고 설득력 있는 말투 (재테크, 투자 전망)</option>
               </select>
-              <Plus size={16} className="text-zinc-600" />
+              <Plus size={16} className="text-zinc-600 font-sans" />
             </div>
           </section>
 
-          {/* 5. 길이 (Size) 단독 박스 */}
           <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 shadow-sm space-y-3 font-sans">
-            <label className="text-[13px] font-black text-white">길이 (Size)</label>
-            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center">
-              <select value={length} onChange={(e) => setLength(e.target.value)} className="w-full bg-transparent text-[11px] font-bold text-zinc-300 outline-none cursor-pointer appearance-none">
+            <label className="text-[13px] font-black text-white font-sans">길이 (Size)</label>
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center font-sans">
+              <select value={length} onChange={(e) => setLength(e.target.value)} className="w-full bg-transparent text-[11px] font-bold text-zinc-300 outline-none cursor-pointer appearance-none font-sans">
                 <option>보통 (약 1,500자): 표준 블로그형 (일반 정보성)</option>
                 <option>짧게 (약 800자): 핵심 요약형 (뉴스, 정보 전달)</option>
                 <option>길게 (약 3,000자): SEO 상위 노출 공략용 (심층 분석)</option>
                 <option>아주 길게 (약 5,000자): 가이드북/칼럼형 (주제 완벽 정복)</option>
               </select>
-              <Plus size={16} className="text-zinc-600" />
+              <Plus size={16} className="text-zinc-600 font-sans" />
             </div>
           </section>
 
-         {/* 🌟 AI 콘텐츠 생성 시작 버튼 (파란색 유지 + 에메랄드 게이지) */}
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full h-16 bg-blue-600 hover:bg-blue-500 rounded-2xl relative overflow-hidden transition-all shadow-xl shadow-blue-900/40 active:scale-[0.98] disabled:opacity-80 group"
+            className="w-full h-16 bg-blue-600 hover:bg-blue-500 rounded-2xl relative overflow-hidden transition-all shadow-xl shadow-blue-900/40 active:scale-[0.98] disabled:opacity-80 group font-sans"
           >
-            {/* ⚡ 차오르는 에메랄드 진행 바 */}
             {loading && (
               <div 
-                className="absolute left-0 top-0 h-full bg-emerald-400/40 transition-all duration-300 ease-out z-0 border-r-2 border-emerald-300 shadow-[2px_0_10px_rgba(52,211,153,0.5)]"
+                className="absolute left-0 top-0 h-full bg-emerald-400/40 transition-all duration-300 ease-out z-0 border-r-2 border-emerald-300 shadow-[2px_0_10px_rgba(52,211,153,0.5)] font-sans"
                 style={{ width: `${progress}%` }}
               />
             )}
             
-            <div className="relative z-10 flex items-center justify-center gap-3">
+            <div className="relative z-10 flex items-center justify-center gap-3 font-sans">
               {loading ? (
                 <>
-                  <Loader2 className="animate-spin text-white" size={24} />
+                  <Loader2 className="animate-spin text-white font-sans" size={24} />
                   <span className="text-lg font-black text-white font-sans tracking-tight">{Math.round(progress)}% 포스팅 집필 중...</span>
                 </>
               ) : (
                 <>
-                  <Zap size={24} className="fill-white" />
+                  <Zap size={24} className="fill-white font-sans" />
                   <span className="text-lg font-black tracking-widest text-white font-sans">AI 콘텐츠 생성 시작</span>
                 </>
               )}
             </div>
           </button>
 
-          {/* 7. 글쓰기 템플릿 안내 섹션 */}
           <section className="pt-6 space-y-4 font-sans">
-            <div className="flex flex-col gap-1 px-1">
-              <p className="text-[14px] font-black text-white">글쓰기 템플릿</p>
-              <p className="text-[11px] font-bold text-zinc-500">- 클릭 시 주제(키워드)칸에 자동 입력됩니다.</p>
+            <div className="flex flex-col gap-1 px-1 font-sans">
+              <p className="text-[14px] font-black text-white font-sans">글쓰기 템플릿</p>
+              <p className="text-[11px] font-bold text-zinc-500 font-sans">- 클릭 시 주제(키워드)칸에 자동 입력됩니다.</p>
             </div>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-2 font-sans">
               {templates.map((text, idx) => (
                 <button
                   key={idx}
                   onClick={() => setTopic(text)}
-                  className="w-full text-left px-5 py-4 bg-zinc-900/40 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800/60 rounded-xl text-[11px] font-bold text-zinc-400 transition-all flex items-center justify-between group"
+                  className="w-full text-left px-5 py-4 bg-zinc-900/40 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800/60 rounded-xl text-[11px] font-bold text-zinc-400 transition-all flex items-center justify-between group font-sans"
                 >
                   <span className="truncate group-hover:text-white transition-colors font-sans">{text}</span>
                   <Plus size={14} className="text-zinc-800 group-hover:text-blue-500 shrink-0 ml-2 font-sans" />
@@ -204,116 +223,114 @@ export default function CreateTab({
         </div>
       </div>
 
-      {/* --- [오른쪽] 프리뷰 (마크다운 소스 모드, 편집기능 탑재) --- */}
-<div className="w-[55%] flex flex-col bg-[#05070a] overflow-hidden">
+      {/* --- [오른쪽] 프리뷰 --- */}
+      <div className="w-[55%] flex flex-col bg-[#05070a] overflow-hidden">
+        <div className="flex justify-between items-center px-10 py-6 border-b border-zinc-800/50 bg-[#05070a]/80 backdrop-blur-md z-10 shrink-0">
+          <div className="flex items-center gap-3 font-sans">
+            <div className={`w-2.5 h-2.5 rounded-full ${content ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-700'}`} />
+            <div className="flex flex-col text-left font-sans">
+              <span className="text-[9px] font-black text-zinc-500 uppercase font-sans">GENERATED CONTENT</span>
+              <span className={`text-[12px] font-black font-sans ${content ? 'text-cyan-400' : 'text-zinc-600'}`}>
+                {loading ? 'WRITING...' : isEditing ? 'EDITING...' : content ? 'COMPLETE' : 'Ready'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 font-sans">
+            {/* 🌟 새로 추가된 글 관리 저장 버튼 */}
+  <button 
+    onClick={() => saveToSupabase(content)} 
+    disabled={!content || loading}
+    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[11px] font-black transition-all uppercase tracking-widest flex items-center gap-2 shadow-[0_0_15px_rgba(37,99,235,0.3)] disabled:opacity-50"
+  >
+    <FileText size={14} /> 글 관리 저장
+  </button>
   
-  {/* 상단 툴바 */}
-  <div className="flex justify-between items-center px-10 py-6 border-b border-zinc-800/50 bg-[#05070a]/80 backdrop-blur-md z-10 shrink-0">
-    <div className="flex items-center gap-3">
-      <div className={`w-2.5 h-2.5 rounded-full ${content ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-700'}`} />
-      <div className="flex flex-col text-left">
-        <span className="text-[9px] font-black text-zinc-500 uppercase">GENERATED CONTENT</span>
-        <span className={`text-[12px] font-black ${content ? 'text-cyan-400' : 'text-zinc-600'}`}>
-          {loading ? 'WRITING...' : isEditing ? 'EDITING...' : content ? 'COMPLETE' : 'Ready'}
-        </span>
+            <button 
+              onClick={() => setIsEditing(!isEditing)} 
+              disabled={!content || loading}
+              className={`px-5 py-2 rounded-lg text-[11px] font-black transition-all uppercase tracking-widest font-sans ${
+                isEditing 
+                ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
+                : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+              }`}
+            >
+              {isEditing ? 'Save' : 'Edit'}
+            </button>
+            <button onClick={() => setIsPreviewOpen(true)} disabled={!content || loading} className="px-5 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[11px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase tracking-widest font-sans">PREVIEW</button>
+            <button onClick={handleCopy} disabled={!content || loading} className="px-5 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase tracking-widest font-sans">COPY</button>
+            <button onClick={handleDownload} disabled={!content || loading} className="px-5 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase tracking-widest font-sans">SAVE</button>
+          </div>
+        </div>
+
+        <div className="w-full h-1 bg-zinc-900 overflow-hidden shrink-0 font-sans">
+          {loading && (
+            <div 
+              className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] font-sans"
+              style={{ width: `${progress}%` }}
+            />
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-[#ffffff]/[0.02] font-sans">
+          {!content && !loading ? (
+            <div className="h-full flex flex-col items-center justify-center text-zinc-500 font-sans">
+              <p className="text-[18px] font-black text-zinc-400 mb-2 tracking-tight italic font-sans">Preview Engine Ready</p>
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto animate-in fade-in duration-500 pb-20 font-sans">
+              {isEditing ? (
+                <textarea
+                  ref={textareaRef}
+                  value={content}
+                  onChange={(e) => {
+                    const start = e.target.selectionStart;
+                    const end = e.target.selectionEnd;
+                    if (typeof setContent === 'function') {
+                      setContent(e.target.value);
+                    }
+                    setTimeout(() => {
+                      if (textareaRef.current) {
+                        textareaRef.current.setSelectionRange(start, end);
+                      }
+                    }, 0);
+                  }}
+                  className="w-full min-h-[70vh] bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8 text-zinc-300 font-mono text-[14px] leading-[2.2] focus:outline-none focus:border-emerald-500/50 transition-all custom-scrollbar resize-none font-sans"
+                />
+              ) : (
+                <pre className="text-zinc-300 font-mono text-[14px] leading-[2.2] whitespace-pre-wrap break-words font-sans">
+                  {content}
+                </pre>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-    
-    <div className="flex gap-2">
-      {/* 🌟 [추가] EDIT / SAVE 버튼 */}
-      <button 
-        onClick={() => setIsEditing(!isEditing)} 
-        disabled={!content || loading}
-        className={`px-5 py-2 rounded-lg text-[11px] font-black transition-all uppercase tracking-widest ${
-          isEditing 
-          ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
-          : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-        }`}
-      >
-        {isEditing ? 'Save' : 'Edit'}
-      </button>
 
-      <button onClick={() => setIsPreviewOpen(true)} disabled={!content || loading} className="px-5 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[11px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase tracking-widest">PREVIEW</button>
-      <button onClick={handleCopy} disabled={!content || loading} className="px-5 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase tracking-widest">COPY</button>
-      <button onClick={handleDownload} disabled={!content || loading} className="px-5 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase tracking-widest">SAVE</button>
-    </div>
-  </div>
-
-{/* 오른쪽 프리뷰 영역 상단 고정 툴바 바로 밑에 추가 */}
-<div className="w-full h-1 bg-zinc-900 overflow-hidden shrink-0">
-  {loading && (
-    <div 
-      className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-      style={{ width: `${progress}%` }}
-    />
-  )}
-</div>
-
-{/* 🌟 [수정] 본문 영역: 타이핑 버그 완벽 해결 */}
-  <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-[#ffffff]/[0.02]">
-    {!content && !loading ? (
-      <div className="h-full flex flex-col items-center justify-center text-zinc-500">
-        <p className="text-[18px] font-black text-zinc-400 mb-2 tracking-tight italic">Preview Engine Ready</p>
-      </div>
-    ) : (
-      <div className="max-w-3xl mx-auto animate-in fade-in duration-500 pb-20">
-        {isEditing ? (
-          /* 🌟 [최종 해결] 타이핑해도 커서 안 튕기고 글자도 잘 들어갑니다. */
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => {
-              const start = e.target.selectionStart;
-              const end = e.target.selectionEnd;
-              
-              if (typeof setContent === 'function') {
-                setContent(e.target.value);
-              }
-
-              // 🌟 타이핑 직후 커서 위치를 강제로 보존하는 브라우저 보정 로직
-              setTimeout(() => {
-                if (textareaRef.current) {
-                  textareaRef.current.setSelectionRange(start, end);
-                }
-              }, 0);
-            }}
-            className="w-full min-h-[70vh] bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8 text-zinc-300 font-mono text-[14px] leading-[2.2] focus:outline-none focus:border-emerald-500/50 transition-all custom-scrollbar resize-none font-sans"
-          />
-        ) : (
-          /* 보기 모드: 마크다운 소스 원문 출력 */
-          <pre className="text-zinc-300 font-mono text-[14px] leading-[2.2] whitespace-pre-wrap break-words font-sans">
-            {content}
-          </pre>
-        )}
-      </div>
-    )}
-  </div>
-</div>
-
-      {/* 미리보기 모달 (사장님 오리지널 스타일 완벽 보존) */}
+      {/* 미리보기 모달 */}
       {isPreviewOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300 font-sans">
           <div className="bg-white text-zinc-900 w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-[40px] shadow-2xl flex flex-col relative animate-in zoom-in duration-300 font-sans">
             <div className="px-10 py-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/80 font-sans">
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 font-sans">
                 <div className="flex gap-2"><div className="w-3 h-3 rounded-full bg-[#FF5F57]" /><div className="w-3 h-3 rounded-full bg-[#FFBD2E]" /><div className="w-3 h-3 rounded-full bg-[#28C840]" /></div>
                 <span className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] font-sans">Browser Preview Mode</span>
               </div>
               <button onClick={() => setIsPreviewOpen(false)} className="p-2 hover:bg-zinc-200 rounded-full transition-all active:scale-90 font-sans"><X size={24} /></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-12 lg:p-24 bg-white custom-scrollbar font-sans font-sans">
-              <article className="max-w-3xl mx-auto font-sans font-sans">
-                <h1 className="text-5xl font-black mb-16 leading-tight tracking-tighter text-black border-b-8 border-blue-500/10 pb-8 italic font-sans font-sans font-sans">{topic || "포스팅 제목"}</h1>
-                <div className="markdown-content leading-[2.1] text-zinc-800 font-medium font-sans font-sans">
+            <div className="flex-1 overflow-y-auto p-12 lg:p-24 bg-white custom-scrollbar font-sans">
+              <article className="max-w-3xl mx-auto font-sans">
+                <h1 className="text-5xl font-black mb-16 leading-tight tracking-tighter text-black border-b-8 border-blue-500/10 pb-8 italic font-sans">{topic || "포스팅 제목"}</h1>
+                <div className="markdown-content leading-[2.1] text-zinc-800 font-medium font-sans">
                   <ReactMarkdown 
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      table: ({node, ...props}) => (<div className="my-10 w-full overflow-hidden rounded-xl border border-zinc-200 shadow-sm font-sans font-sans"><table className="w-full text-sm text-left border-collapse font-sans font-sans" {...props} /></div>),
-                      thead: ({node, ...props}) => <thead className="bg-zinc-50 border-b border-zinc-200 font-sans font-sans" {...props} />,
-                      th: ({node, ...props}) => <th className="px-5 py-4 font-black text-zinc-700 border-r border-zinc-200 last:border-0 font-sans font-sans font-sans" {...props} />,
-                      td: ({node, ...props}) => <td className="px-5 py-4 border-t border-zinc-100 border-r border-zinc-200 last:border-0 font-sans font-sans font-sans font-sans" {...props} />,
-                      h2: ({node, ...props}) => <h2 className="border-l-8 border-blue-500 pl-6 text-2xl font-black tracking-tight mt-16 mb-8 text-black uppercase italic font-sans font-sans" {...props} />,
-                      p: ({node, ...props}) => <p className="mb-6 font-sans font-sans font-sans font-sans font-sans font-sans" {...props} />,
+                      table: ({node, ...props}) => (<div className="my-10 w-full overflow-hidden rounded-xl border border-zinc-200 shadow-sm font-sans"><table className="w-full text-sm text-left border-collapse font-sans" {...props} /></div>),
+                      thead: ({node, ...props}) => <thead className="bg-zinc-50 border-b border-zinc-200 font-sans" {...props} />,
+                      th: ({node, ...props}) => <th className="px-5 py-4 font-black text-zinc-700 border-r border-zinc-200 last:border-0 font-sans" {...props} />,
+                      td: ({node, ...props}) => <td className="px-5 py-4 border-t border-zinc-100 border-r border-zinc-200 last:border-0 font-sans" {...props} />,
+                      h2: ({node, ...props}) => <h2 className="border-l-8 border-blue-500 pl-6 text-2xl font-black tracking-tight mt-16 mb-8 text-black uppercase italic font-sans" {...props} />,
+                      p: ({node, ...props}) => <p className="mb-6 font-sans" {...props} />,
                     }}
                   >
                     {content}
@@ -321,8 +338,8 @@ export default function CreateTab({
                 </div>
               </article>
             </div>
-            <div className="px-10 py-8 border-t border-zinc-100 bg-zinc-50/50 flex justify-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-              <button onClick={() => setIsPreviewOpen(false)} className="px-14 py-4 bg-black text-white text-xs font-black rounded-2xl hover:bg-zinc-800 transition-all uppercase tracking-[0.3em] shadow-xl active:scale-95 font-sans font-sans font-sans font-sans font-sans font-sans">Close Preview</button>
+            <div className="px-10 py-8 border-t border-zinc-100 bg-zinc-50/50 flex justify-center font-sans">
+              <button onClick={() => setIsPreviewOpen(false)} className="px-14 py-4 bg-black text-white text-xs font-black rounded-2xl hover:bg-zinc-800 transition-all uppercase tracking-[0.3em] shadow-xl active:scale-95 font-sans">Close Preview</button>
             </div>
           </div>
         </div>

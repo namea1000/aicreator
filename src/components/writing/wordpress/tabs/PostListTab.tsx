@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // 🌟 useEffect 추가됨
 import { 
   Search, FileText, Trash2, Edit3, Eye, 
   Share2, Mail, Download, ChevronRight, 
   Filter, Calendar, MoreVertical, LayoutGrid, List,
   Type, AlignLeft, MessageSquare, Copy, Send
 } from 'lucide-react';
+// 🌟 supabase 열쇠 가져오기
+import { supabase } from '@/lib/supabase';
 
-// 🌟 기존 속성(Type, Date, Status) 보존 + 신규(Tone, Size) 추가
+// 🌟 [복원] 사장님의 소중한 예시 데이터 100% 그대로 유지
 const initialPosts = [
   { 
     id: 1, 
@@ -43,14 +45,45 @@ const initialPosts = [
 ];
 
 export default function PostListTab() {
-  const [posts, setPosts] = useState(initialPosts);
+  // 🌟 [복원 및 수정] posts 바구니 정의
+  const [posts, setPosts] = useState<any[]>(initialPosts); 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // 삭제 기능 (기존 유지)
-  const handleDelete = (id: number) => {
+  // 🌟 [핵심 수술] fetchPosts를 컴포넌트 내부로 넣어 setPosts 빨간줄 해결
+const fetchPosts = async () => {
+  try {
+    // 🌟 현재 로그인한 실제 사용자의 정보를 가져옵니다.
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.log("로그인이 필요합니다.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('user_email', user.email) // 👈 고정된 메일 대신 user.email 사용!
+      .order('created_at', { ascending: false });
+
+    if (data) setPosts(data);
+  } catch (error) {
+    console.error("데이터 로드 실패:", error);
+  }
+};
+
+  // 화면 열릴 때 실행
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+  
+  // 삭제 기능 (기본 유지)
+  const handleDelete = async (id: number) => {
     if(confirm("정말 이 포스팅을 삭제하시겠습니까?")) {
+      // DB에서도 삭제 시도
+      await supabase.from('posts').delete().eq('id', id);
       setPosts(posts.filter(p => p.id !== id));
       if (selectedPost?.id === id) setSelectedPost(null);
     }
@@ -66,7 +99,7 @@ export default function PostListTab() {
           <div className="flex justify-between items-end mb-8">
             <div>
               <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase mb-1">Post Management</h2>
-              <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">생성된 콘텐츠의 모든 설정값을 한눈에 관리하세요.</p>
+              <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest font-sans">생성된 콘텐츠의 모든 설정값을 한눈에 관리하세요.</p>
             </div>
             <div className="flex gap-2">
                <button className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-white transition-all"><LayoutGrid size={18}/></button>
@@ -75,8 +108,8 @@ export default function PostListTab() {
           </div>
 
           {/* 검색 바 */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
+          <div className="relative font-sans">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 font-sans" size={18} />
             <input 
               type="text" 
               placeholder="제목, 말투, 유형 검색..."
@@ -86,61 +119,61 @@ export default function PostListTab() {
           </div>
         </div>
 
-        {/* 🌟 메인 테이블 (기존 항목 + 말투, 길이) */}
+        {/* 🌟 메인 테이블 (말투, 길이 유지) */}
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          <table className="w-full border-separate border-spacing-y-3">
+          <table className="w-full border-separate border-spacing-y-3 font-sans">
             <thead>
-              <tr className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">
-                <th className="px-6 py-2 text-left w-12 font-sans">No</th>
-                <th className="px-6 py-2 text-left font-sans">Title</th>
-                <th className="px-6 py-2 text-left w-32 font-sans">Type</th>
-                <th className="px-6 py-2 text-left w-48 font-sans text-blue-500/80">Tone (말투)</th>
-                <th className="px-6 py-2 text-left w-40 font-sans text-emerald-500/80">Size (길이)</th>
-                <th className="px-6 py-2 text-left w-32 font-sans">Date</th>
-                <th className="px-6 py-2 text-left w-24 font-sans">Status</th>
-                <th className="px-6 py-2 text-center w-28 font-sans">Actions</th>
+              <tr className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] font-sans">
+                <th className="px-6 py-2 text-left w-12 font-sans font-sans">No</th>
+                <th className="px-6 py-2 text-left font-sans font-sans">Title</th>
+                <th className="px-6 py-2 text-left w-32 font-sans font-sans">Type</th>
+                <th className="px-6 py-2 text-left w-48 font-sans font-sans text-blue-500/80">Tone (말투)</th>
+                <th className="px-6 py-2 text-left w-40 font-sans font-sans text-emerald-500/80">Size (길이)</th>
+                <th className="px-6 py-2 text-left w-32 font-sans font-sans">Date</th>
+                <th className="px-6 py-2 text-left w-24 font-sans font-sans">Status</th>
+                <th className="px-6 py-2 text-center w-28 font-sans font-sans">Actions</th>
               </tr>
             </thead>
             <tbody>
               {posts.map((post, idx) => (
                 <tr 
                   key={post.id} 
-                  className="group bg-zinc-900/20 border border-zinc-800 hover:bg-zinc-800/40 transition-all cursor-pointer"
+                  className="group bg-zinc-900/20 border border-zinc-800 hover:bg-zinc-800/40 transition-all cursor-pointer font-sans"
                   onClick={() => { setSelectedPost(post); setIsEditing(false); }}
                 >
-                  <td className="px-6 py-5 rounded-l-2xl border-y border-l border-zinc-800/50 text-[11px] font-bold text-zinc-600 font-sans">{idx + 1}</td>
-                  <td className="px-6 py-5 border-y border-zinc-800/50">
+                  <td className="px-6 py-5 rounded-l-2xl border-y border-l border-zinc-800/50 text-[11px] font-bold text-zinc-600 font-sans font-sans">{idx + 1}</td>
+                  <td className="px-6 py-5 border-y border-zinc-800/50 font-sans">
                     <span className="text-[14px] font-black text-zinc-300 group-hover:text-blue-400 transition-colors font-sans">{post.title}</span>
                   </td>
-                  <td className="px-6 py-5 border-y border-zinc-800/50">
-                    <span className="px-3 py-1 bg-zinc-950 border border-zinc-800 rounded-full text-[10px] font-bold text-zinc-500 font-sans">{post.type}</span>
+                  <td className="px-6 py-5 border-y border-zinc-800/50 font-sans">
+                    <span className="px-3 py-1 bg-zinc-950 border border-zinc-800 rounded-full text-[10px] font-bold text-zinc-500 font-sans">{post.type || post.post_type}</span>
                   </td>
-                  {/* 🌟 추가된 말투 컬럼 */}
-                  <td className="px-6 py-5 border-y border-zinc-800/50">
-                    <div className="flex items-center gap-2 text-[11px] font-bold text-zinc-400 font-sans">
-                      <MessageSquare size={12} className="text-blue-500" />
-                      {post.tone.split(' (')[0]}
+                  {/* 🌟 말투 컬럼 보존 */}
+                  <td className="px-6 py-5 border-y border-zinc-800/50 font-sans">
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-zinc-400 font-sans font-sans">
+                      <MessageSquare size={12} className="text-blue-500 font-sans" />
+                      {(post.tone || "").split(' (')[0]}
                     </div>
                   </td>
-                  {/* 🌟 추가된 길이 컬럼 */}
-                  <td className="px-6 py-5 border-y border-zinc-800/50">
-                    <div className="flex items-center gap-2 text-[11px] font-bold text-zinc-400 font-sans">
-                      <AlignLeft size={12} className="text-emerald-500" />
-                      {post.size.split(' (')[0]}
+                  {/* 🌟 길이 컬럼 보존 */}
+                  <td className="px-6 py-5 border-y border-zinc-800/50 font-sans">
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-zinc-400 font-sans font-sans">
+                      <AlignLeft size={12} className="text-emerald-500 font-sans" />
+                      {(post.size || post.length || "").split(' (')[0]}
                     </div>
                   </td>
-                  <td className="px-6 py-5 border-y border-zinc-800/50 text-[11px] font-bold text-zinc-600 font-sans">{post.date}</td>
-                  <td className="px-6 py-5 border-y border-zinc-800/50">
-                    <div className="flex items-center gap-1.5 font-sans">
-                      <div className={`w-1.5 h-1.5 rounded-full ${post.status === '완료' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                      <span className="text-[10px] font-black uppercase tracking-tighter">{post.status}</span>
+                  <td className="px-6 py-5 border-y border-zinc-800/50 text-[11px] font-bold text-zinc-600 font-sans font-sans">{post.date || new Date(post.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-5 border-y border-zinc-800/50 font-sans">
+                    <div className="flex items-center gap-1.5 font-sans font-sans font-sans">
+                      <div className={`w-1.5 h-1.5 rounded-full ${post.status === '완료' ? 'bg-emerald-500 font-sans' : 'bg-amber-500 font-sans'}`} />
+                      <span className="text-[10px] font-black uppercase tracking-tighter font-sans">{post.status}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-5 rounded-r-2xl border-y border-r border-zinc-800/50" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-2">
-                      <button className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-white transition-all"><Edit3 size={16}/></button>
-                      <button onClick={() => handleDelete(post.id)} className="p-2 hover:bg-red-900/20 rounded-lg text-zinc-500 hover:text-red-500 transition-all"><Trash2 size={16}/></button>
-                      <button className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-white transition-all"><MoreVertical size={16}/></button>
+                  <td className="px-6 py-5 rounded-r-2xl border-y border-r border-zinc-800/50 font-sans" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-2 font-sans">
+                      <button className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-white transition-all font-sans"><Edit3 size={16}/></button>
+                      <button onClick={() => handleDelete(post.id)} className="p-2 hover:bg-red-900/20 rounded-lg text-zinc-500 hover:text-red-500 transition-all font-sans"><Trash2 size={16}/></button>
+                      <button className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-white transition-all font-sans"><MoreVertical size={16}/></button>
                     </div>
                   </td>
                 </tr>
@@ -152,47 +185,47 @@ export default function PostListTab() {
 
       {/* --- [오른쪽] 상세 보기 슬라이드 패널 --- */}
       {selectedPost && (
-        <div className="w-full lg:w-[45%] h-full flex flex-col bg-[#080a0f] border-l border-zinc-800 animate-in slide-in-from-right duration-500">
+        <div className="w-full lg:w-[45%] h-full flex flex-col bg-[#080a0f] border-l border-zinc-800 animate-in slide-in-from-right duration-500 font-sans">
           {/* 패널 헤더 */}
-          <div className="p-6 border-b border-zinc-800/50 flex justify-between items-center bg-[#05070a]">
-            <button onClick={() => setSelectedPost(null)} className="flex items-center gap-2 text-zinc-500 hover:text-white text-[11px] font-black uppercase tracking-widest font-sans">
-              <ChevronRight className="rotate-180" size={16}/> Back to List
+          <div className="p-6 border-b border-zinc-800/50 flex justify-between items-center bg-[#05070a] font-sans">
+            <button onClick={() => setSelectedPost(null)} className="flex items-center gap-2 text-zinc-500 hover:text-white text-[11px] font-black uppercase tracking-widest font-sans font-sans">
+              <ChevronRight className="rotate-180 font-sans" size={16}/> Back to List
             </button>
-            <div className="flex gap-2">
+            <div className="flex gap-2 font-sans">
               <button 
                 onClick={() => setIsEditing(!isEditing)}
-                className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all font-sans ${isEditing ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-white'}`}
+                className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all font-sans font-sans ${isEditing ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 font-sans' : 'bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-white font-sans'}`}
               >
                 {isEditing ? 'Save' : 'Edit Post'}
               </button>
-              <button className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-blue-500 hover:text-blue-400 transition-all"><Download size={18}/></button>
+              <button className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-blue-500 hover:text-blue-400 transition-all font-sans font-sans"><Download size={18}/></button>
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-12 custom-scrollbar font-sans font-sans">
             {/* 설정 요약 정보 (말투, 길이 강조) */}
-            <div className="flex gap-4 mb-10 pb-10 border-b border-zinc-800/50 font-sans">
-               <div className="flex-1 p-4 bg-zinc-900/40 rounded-2xl border border-zinc-800/50">
-                  <p className="text-[9px] font-black text-zinc-600 uppercase mb-1">Selected Tone</p>
-                  <p className="text-[12px] font-bold text-blue-400">{selectedPost.tone}</p>
+            <div className="flex gap-4 mb-10 pb-10 border-b border-zinc-800/50 font-sans font-sans">
+               <div className="flex-1 p-4 bg-zinc-900/40 rounded-2xl border border-zinc-800/50 font-sans font-sans">
+                  <p className="text-[9px] font-black text-zinc-600 uppercase mb-1 font-sans">Selected Tone</p>
+                  <p className="text-[12px] font-bold text-blue-400 font-sans">{selectedPost.tone}</p>
                </div>
-               <div className="flex-1 p-4 bg-zinc-900/40 rounded-2xl border border-zinc-800/50">
-                  <p className="text-[9px] font-black text-zinc-600 uppercase mb-1">Target Size</p>
-                  <p className="text-[12px] font-bold text-emerald-400">{selectedPost.size}</p>
+               <div className="flex-1 p-4 bg-zinc-900/40 rounded-2xl border border-zinc-800/50 font-sans font-sans">
+                  <p className="text-[9px] font-black text-zinc-600 uppercase mb-1 font-sans font-sans">Target Size</p>
+                  <p className="text-[12px] font-bold text-emerald-400 font-sans font-sans">{selectedPost.size || selectedPost.length}</p>
                </div>
             </div>
 
-            <div className="max-w-3xl">
-               <h1 className="text-4xl font-black text-white italic tracking-tighter leading-tight mb-8 font-sans">{selectedPost.title}</h1>
+            <div className="max-w-3xl font-sans">
+               <h1 className="text-4xl font-black text-white italic tracking-tighter leading-tight mb-8 font-sans font-sans">{selectedPost.title}</h1>
                
                {isEditing ? (
                  <textarea
                    value={selectedPost.content}
                    onChange={(e) => setSelectedPost({...selectedPost, content: e.target.value})}
-                   className="w-full min-h-[50vh] bg-transparent border-none text-zinc-400 font-mono text-[14px] leading-[2.2] focus:outline-none resize-none"
+                   className="w-full min-h-[50vh] bg-transparent border-none text-zinc-400 font-mono text-[14px] leading-[2.2] focus:outline-none resize-none font-sans font-sans"
                  />
                ) : (
-                 <pre className="whitespace-pre-wrap text-zinc-400 font-mono text-[14px] leading-[2.2] font-sans">
+                 <pre className="whitespace-pre-wrap text-zinc-400 font-mono text-[14px] leading-[2.2] font-sans font-sans">
                    {selectedPost.content}
                  </pre>
                )}
@@ -200,12 +233,12 @@ export default function PostListTab() {
           </div>
 
           {/* 패널 푸터 (공유 및 프리뷰) */}
-          <div className="p-8 border-t border-zinc-800/50 flex gap-4 bg-[#05070a]">
-             <button className="flex-1 flex items-center justify-center gap-3 py-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-[11px] font-black text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all uppercase tracking-widest font-sans">
-               <Share2 size={18}/> SNS Share
+          <div className="p-8 border-t border-zinc-800/50 flex gap-4 bg-[#05070a] font-sans font-sans">
+             <button className="flex-1 flex items-center justify-center gap-3 py-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-[11px] font-black text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all uppercase tracking-widest font-sans font-sans">
+               <Share2 size={18} className="font-sans" /> SNS Share
              </button>
-             <button className="flex-1 flex items-center justify-center gap-3 py-4 bg-blue-600 rounded-2xl text-[11px] font-black text-white hover:bg-blue-500 transition-all uppercase tracking-widest shadow-xl shadow-blue-600/20 font-sans">
-               <Eye size={18}/> Preview Mode
+             <button className="flex-1 flex items-center justify-center gap-3 py-4 bg-blue-600 rounded-2xl text-[11px] font-black text-white hover:bg-blue-500 transition-all uppercase tracking-widest shadow-xl shadow-blue-600/20 font-sans font-sans">
+               <Eye size={18} className="font-sans" /> Preview Mode
              </button>
           </div>
         </div>
