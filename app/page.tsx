@@ -66,7 +66,7 @@ export default function MainLandingPage() {
               <div className="absolute inset-0 bg-blue-500/15 rounded-full blur-3xl group-hover:bg-blue-500/30 transition-all duration-500" />
               
               <Image 
-                src="/logobg.png" // public 폴더에 투명 배경 WebP 또는 png 로고가 있어야 함
+                src="/logobg.webp" // public 폴더에 투명 배경 WebP 또는 png 로고가 있어야 함
                 alt="Creaibox Logo"
                 fill
                 className="object-contain relative z-10 drop-shadow-[0_0_20px_rgba(59,130,246,0.6)] scale-110"
@@ -178,7 +178,7 @@ export default function MainLandingPage() {
                 
                 <div className="relative overflow-visible">
                   <Image 
-                    src="/logobg.png" 
+                    src="/logobg.webp" 
                     alt="Creaibox Hero Logo"
                     width={750} // 텍스트 자리를 채우는 웅장한 사이즈
                     height={280}
