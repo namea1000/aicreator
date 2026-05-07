@@ -6,14 +6,12 @@ import { ChevronDown, User as UserIcon, Settings, LogOut, Sparkles, Zap, ArrowRi
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function MainLandingPage() {
   const [isStudioActive, setIsStudioActive] = useState(false);
   const [activeMenu, setActiveMenu] = useState('Writing');
-  
-  // ✅ [수정] studioViewMode 타입에 'MyPage' 추가
   const [studioViewMode, setStudioViewMode] = useState<'Studio' | 'Vault' | 'MyPage'>('Studio');
-  
   const [user, setUser] = useState<User | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -51,17 +49,34 @@ export default function MainLandingPage() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col font-sans overflow-hidden">
       
-      {/* --- 전역 헤더 --- */}
-      <header className="h-20 border-b border-zinc-800 bg-black flex items-center px-8 z-[100] relative shrink-0">
-        <div className="absolute left-8 h-full flex items-center">
+      {/* --- 전역 헤더 (사장님 원본 보존 + 로고 웅장화) --- */}
+      <header className="h-25 border-b border-zinc-800/50 bg-black/80 backdrop-blur-md flex items-center px-12 z-[100] relative shrink-0">
+        {/* [왼쪽] 이미지 로고 영역 */}
+        <div className="absolute left-10 h-full flex items-center">
           <div 
-            className="text-2xl font-black italic tracking-tighter text-blue-500 uppercase cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => { setIsStudioActive(false); setStudioViewMode('Studio'); }}
+            className="flex items-center gap-5 cursor-pointer group transition-all duration-500 hover:brightness-125"
+            onClick={() => {
+              setIsStudioActive(false);
+              setStudioViewMode('Studio');
+            }}
           >
-            CreAiBox
+            {/* 로고 이미지 컨테이너 (h-50에 맞춰 시원하게 확장) */}
+            <div className="relative w-50 h-50 overflow-visible flex items-center justify-center">
+              {/* 로고 뒤쪽 은은한 글로우 효과 */}
+              <div className="absolute inset-0 bg-blue-500/15 rounded-full blur-3xl group-hover:bg-blue-500/30 transition-all duration-500" />
+              
+              <Image 
+                src="/logobg.png" // public 폴더에 투명 배경 WebP 또는 png 로고가 있어야 함
+                alt="Creaibox Logo"
+                fill
+                className="object-contain relative z-10 drop-shadow-[0_0_20px_rgba(59,130,246,0.6)] scale-110"
+                priority
+              />
+            </div>
           </div>
         </div>
         
+        {/* [중앙] 메뉴 영역 (사장님 원본 로직 유지 + ml 조정) */}
         <div className="flex-1 flex justify-center items-center">
           <nav className="flex space-x-12">
             {menuItems.map((item) => (
@@ -72,7 +87,11 @@ export default function MainLandingPage() {
                   setStudioViewMode('Studio'); 
                   setIsStudioActive(true); 
                 }} 
-                className={`text-2xl font-black uppercase tracking-tighter transition-all duration-300 relative py-1 ${isStudioActive && activeMenu === item.value && studioViewMode === 'Studio' ? 'text-blue-500' : 'text-white hover:text-blue-400'}`}
+                className={`text-2xl font-black uppercase tracking-tighter transition-all duration-300 relative py-1 ${
+                  isStudioActive && activeMenu === item.value && studioViewMode === 'Studio' 
+                    ? 'text-blue-500 scale-110' 
+                    : 'text-white hover:text-blue-400 hover:scale-105'
+                }`}
               >
                 {item.label}
               </button>
@@ -80,11 +99,12 @@ export default function MainLandingPage() {
           </nav>
         </div>
 
+        {/* [오른쪽] 사용자 영역 (사장님 원본 로직 유지) */}
         <div className="absolute right-8 h-full flex items-center gap-4">
           {user ? (
             <div className="relative" ref={dropdownRef}>
-              <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-zinc-800/50 transition-all">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-emerald-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">
+              <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-zinc-800/50 transition-all group">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-emerald-500 flex items-center justify-center text-white text-xs font-bold shadow-lg group-hover:scale-110 transition-transform">
                   {user.email?.[0].toUpperCase()}
                 </div>
                 <span className="text-base font-bold text-zinc-300 group-hover:text-white">{user.email?.split('@')[0]}</span>
@@ -98,7 +118,6 @@ export default function MainLandingPage() {
                     <p className="text-sm font-bold truncate text-white">{user.email?.split('@')[0]}</p>
                   </div>
                   
-                  {/* ✅ [수정] 내 프로필 클릭 시 MyPage 모드로 전환 */}
                   <button 
                     onClick={() => { 
                       setIsProfileOpen(false); 
@@ -131,7 +150,7 @@ export default function MainLandingPage() {
             <div className="flex items-center gap-6">
               <Link href="/login" className="text-sm font-bold text-zinc-400 hover:text-white transition-all">로그인</Link>
               <Link href="/signup">
-                <button className="px-6 py-2.5 bg-[#F6962F] hover:bg-[#E0851F] text-white text-sm font-black rounded-lg shadow-lg">회원가입</button>
+                <button className="px-6 py-2.5 bg-[#F6962F] hover:bg-[#E0851F] text-white text-sm font-black rounded-lg shadow-lg active:scale-95 transition-transform">회원가입</button>
               </Link>
             </div>
           )}
@@ -144,54 +163,71 @@ export default function MainLandingPage() {
           <StudioLayout activeMenu={activeMenu} initialViewMode={studioViewMode} />
         ) : (
           <div className="flex-1 overflow-y-auto bg-[#05070a] custom-scrollbar relative">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[400px] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
+            {/* 배경 블루 글로우 효과 */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-blue-600/10 rounded-full blur-[160px] pointer-events-none" />
 
-            <div className="max-w-6xl mx-auto px-8 pt-12 pb-12 flex flex-col items-center">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold mb-6">
-                <Sparkles size={12} /> All-in-One AI Creative Platform
+            <div className="max-w-6xl mx-auto px-8 pt-20 pb-24 flex flex-col items-center relative z-10">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-bold mb-10 shadow-sm animate-fade-in">
+                <Sparkles size={14} /> All-in-One AI Creative Platform
               </div>
 
-              <h1 className="text-6xl lg:text-7xl font-black tracking-tighter text-center leading-[1] italic uppercase mb-6">
-                THE CREATOR'S <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-emerald-400 to-blue-500">AI TOOLBOX</span>
-              </h1>
+              {/* 🌟 텍스트 대신 웅장한 히어로 로고 배치 */}
+              <div className="relative mb-12 group cursor-default">
+                {/* 로고 뒤 배경 터지는 글로우 */}
+                <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-[100px] group-hover:bg-blue-500/30 transition-all duration-1000 scale-150" />
+                
+                <div className="relative overflow-visible">
+                  <Image 
+                    src="/logobg.png" 
+                    alt="Creaibox Hero Logo"
+                    width={750} // 텍스트 자리를 채우는 웅장한 사이즈
+                    height={280}
+                    className="object-contain drop-shadow-[0_0_60px_rgba(59,130,246,0.6)] transition-transform duration-700 hover:scale-[1.03]"
+                    priority
+                  />
+                </div>
+              </div>
 
-              <p className="text-zinc-500 text-base font-medium text-center max-w-xl leading-snug mb-8">
+              <p className="text-zinc-400 text-xl font-medium text-center max-w-2xl leading-relaxed mb-12 animate-fade-in opacity-80">
                 최첨단 AI 모델로 상상하는 모든 것을 생성하세요. <br />
                 단 한 곳에서 제어하는 완벽한 크리에이티브 환경.
               </p>
 
-              <div className="flex gap-4 mb-12">
+              <div className="flex gap-5 mb-20">
                 <button 
                   onClick={() => { setActiveMenu('Writing'); setIsStudioActive(true); setStudioViewMode('Studio'); }}
-                  className="px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2 group text-sm"
+                  className="px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition-all shadow-2xl shadow-blue-600/30 flex items-center gap-3 group text-base active:scale-95"
                 >
-                  Start Creating <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  Start Creating <ArrowRight size={20} className="group-hover:translate-x-1.5 transition-transform" />
                 </button>
-                <button className="px-8 py-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-white font-black rounded-xl text-sm transition-all">
+                <button className="px-10 py-4 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-white font-black rounded-2xl text-base transition-all active:scale-95 shadow-lg">
                   Explore Tools
                 </button>
               </div>
 
+              {/* 하단 POPULAR STUDIOS 섹션 (사장님 원본 유지) */}
               <div className="w-full text-left">
-                <div className="flex items-center justify-between mb-6 border-b border-zinc-800/50 pb-4">
-                   <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-2">
-                     <MousePointer2 size={18} className="text-blue-500" /> POPULAR STUDIOS
+                <div className="flex items-center justify-between mb-8 border-b border-zinc-800/50 pb-5">
+                   <h3 className="text-2xl font-black italic uppercase tracking-tighter flex items-center gap-3">
+                     <MousePointer2 size={24} className="text-blue-500" /> POPULAR STUDIOS
                    </h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {menuItems.map((item, idx) => (
                     <div 
                       key={idx}
                       onClick={() => { setActiveMenu(item.value); setIsStudioActive(true); setStudioViewMode('Studio'); }}
-                      className="group bg-zinc-900/40 border border-zinc-800 p-6 rounded-2xl hover:border-blue-500/50 hover:bg-zinc-900/60 transition-all cursor-pointer relative overflow-hidden"
+                      className="group bg-zinc-900/40 border border-zinc-800 p-8 rounded-[32px] hover:border-blue-500/50 hover:bg-zinc-900/60 transition-all cursor-pointer relative overflow-hidden shadow-sm"
                     >
-                      <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center mb-4 border border-zinc-700 group-hover:scale-105 transition-transform duration-300">
-                        <Zap size={18} className="text-blue-400" />
+                      <div className="w-12 h-12 bg-zinc-800 rounded-2xl flex items-center justify-center mb-5 border border-zinc-700 group-hover:scale-110 transition-all duration-500 shadow-inner">
+                        <Zap size={22} className="text-blue-400 group-hover:text-blue-300" />
                       </div>
-                      <h4 className="text-lg font-black mb-1 group-hover:text-blue-400 transition-colors uppercase italic">{item.label}</h4>
-                      <p className="text-zinc-500 text-xs leading-relaxed font-medium">{item.desc}</p>
+                      <h4 className="text-xl font-black mb-2 group-hover:text-blue-400 transition-colors uppercase italic tracking-tight">{item.label}</h4>
+                      <p className="text-zinc-500 text-sm leading-relaxed font-medium opacity-80">{item.desc}</p>
+                      
+                      {/* 카드 하단 은은한 배경 효과 */}
+                      <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all" />
                     </div>
                   ))}
                 </div>
