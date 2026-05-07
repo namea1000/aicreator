@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { PenLine, FileText, ImageIcon, ImagePlus, CalendarCheck, Settings2, Search, MessageSquare } from 'lucide-react';
 import CreateTab from './tabs/CreateTab';
+import PostListTab from './tabs/PostListTab'; // 🌟 정확히 임포트 완료!
 
 export default function WordPressCenter(props: any) {
   // props에는 topic, content, handleGenerate 등이 들어있습니다.
@@ -44,9 +45,14 @@ export default function WordPressCenter(props: any) {
 
         {/* 탭 콘텐츠 영역 */}
         <div className="flex-1 overflow-hidden">
+          {/* 🌟 기존 CreateTab 유지 */}
           {activeTab === 'create' && <CreateTab {...props} />}
           
-          {['manage', 'thumbnail', 'image-insert', 'publish', 'api-config'].includes(activeTab) && (
+          {/* 🌟 글 관리 탭 연결 (기존 Coming Soon에서 manage를 제외하고 실제 컴포넌트 연결) */}
+          {activeTab === 'manage' && <PostListTab />}
+          
+          {/* 🌟 나머지 기능들만 Coming Soon 유지 (id에서 manage 삭제) */}
+          {['thumbnail', 'image-insert', 'publish', 'api-config'].includes(activeTab) && (
             <div className="flex items-center justify-center h-full text-zinc-600 font-black italic uppercase tracking-widest">
               {activeTab} Content Coming Soon...
             </div>
@@ -67,7 +73,7 @@ export default function WordPressCenter(props: any) {
           </div>
         </div>
         <div className="flex-1 p-5 flex flex-col gap-4">
-          <button className="flex items-center justify-center gap-3 px-4 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-2xl transition-all active:scale-95">
+          <button className="flex items-center justify-center gap-3 px-4 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-2xl transition-all active:scale-[0.95]">
             <MessageSquare size={18} /> AI CHATTING
           </button>
         </div>

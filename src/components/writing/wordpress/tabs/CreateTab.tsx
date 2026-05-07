@@ -1,25 +1,58 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Eye, X, PenLine, Sparkles, Loader2, Copy, FileText, Globe, MessageSquare, ListOrdered, MousePointer2, Zap, Plus, Share2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+
 export default function CreateTab({ 
-  topic, setTopic, handleGenerate, loading, content,
+  topic, setTopic, handleGenerate, loading, content, setContent,
   useSearch, setUseSearch, handleCopy, handleDownload,
   tone, setTone, length, setLength
 }: any) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false); // 편집 모드 여부
+  
+  const [progress, setProgress] = useState(0); // 진행률 상태 추가
+  
+  // 🌟 커서 위치 보존을 위한 Ref
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+  let interval: NodeJS.Timeout;
+
+  // 오직 '로딩 중'일 때만 게이지가 움직이게 합니다.
+  if (loading) {
+    setProgress(0);
+    interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 95) return 95;
+        const step = prev < 40 ? 5 : prev < 70 ? 2 : 0.5;
+        return Math.min(prev + step, 95);
+      });
+    }, 300);
+  } else {
+    // 🌟 로딩이 끝나면 더 이상 content 변화를 감시하지 않고 종료합니다.
+    // 이전에는 [loading, content]를 감시해서 수정할 때마다 여기가 실행됐던 게 문제!
+    if (content && progress < 100 && progress !== 0) {
+      setProgress(100);
+      setTimeout(() => setProgress(0), 2000);
+    }
+  }
+
+  return () => clearInterval(interval);
+  // 🌟 의존성 배열에서 'content'를 제거합니다! 
+  // 그래야 글 수정(setContent)할 때 이 useEffect가 다시 실행 안 됩니다.
+}, [loading]);
+
   const [postType, setPostType] = useState('생활 정책 및 정부 지원금');
 
-  const topicPlaceholder = `원하시는 주제를 상세히 입력할수록 좋은 글이 생성됩니다.
+  const topicPlaceholder = `원하시는 주제를 상세히 입력할수록 좋은 글이 생성됩니다.(아래 글쓰기 템플릿 참조)
 
-(예시)
-- 아이폰 15 프로와 갤럭시 S23 울트라의 카메라 성능 비교
-- 초보자를 위한 3박 4일 도쿄 여행 코스 및 맛집 추천
-- 2024년 청년 버팀목 전세자금대출 조건 및 신청 방법 정리
-- 직장인을 위한 쉽고 맛있는 일주일 밑반찬 레시피 5가지`;
+- (예시1) 아이폰 17 프로와 갤럭시 S25 울트라의 카메라 성능 비교
+- (예시1) 2026년 청년 버팀목 전세자금대출 조건 및 신청 방법 정리`;
 
   const templates = [
     "최신 AI 기술을 활용한 워드프레스 자동 포스팅 구축 방법과 수익화 전략",
@@ -40,118 +73,130 @@ export default function CreateTab({
       
       {/* --- [왼쪽] 스튜디오 컨트롤 타워 (45%) --- */}
       <div className="w-[45%] flex flex-col h-full bg-[#05070a]">
-        {/* 🌟 잘림 방지: h-full과 overflow-y-auto를 확실하게 적용 */}
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8">
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-4 pb-32">
           
-          {/* 1. 주제 입력 섹션 */}
-          <section className="space-y-3">
-            <label className="text-[11px] font-black text-blue-500 uppercase tracking-[0.2em] flex items-center gap-2">
-              <PenLine size={14} /> 포스팅 주제 / 키워드
+          {/* 1. Posting Topic / Keyword 박스 */}
+          <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 shadow-sm space-y-3">
+            <label className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
+              <PenLine size={14} className="text-blue-500" /> Posting Topic / Keyword
             </label>
             <textarea
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder={topicPlaceholder}
-              className="w-full h-44 bg-zinc-900/30 border border-zinc-800 rounded-2xl p-5 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all resize-none placeholder:text-zinc-700 leading-relaxed text-white shadow-inner"
+              className="w-full h-32 bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all resize-none placeholder:text-zinc-800 leading-relaxed text-white"
             />
           </section>
 
-          {/* 2. 가로 설정 바 (기안서 디자인 100% 반영) */}
-          <section className="p-6 bg-zinc-900/20 border border-zinc-800/50 rounded-[28px] space-y-6">
-            
-            {/* 상단: 팩트체크 & 웅장한 글 유형 */}
-            <div className="flex items-center gap-6">
-              <label className="flex items-center cursor-pointer group shrink-0">
+          {/* 2. 최신 정보 팩트체크 활성화 (그림처럼 단독 박스) */}
+          <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <span className="text-[13px] font-black text-white">최신 정보 팩트체크 활성화</span>
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] font-bold text-zinc-500">최신 정보 활성화</span>
+              <label className="relative flex items-center cursor-pointer">
                 <input type="checkbox" checked={useSearch} onChange={(e) => setUseSearch(e.target.checked)} className="sr-only peer" />
-                <div className="w-5 h-5 rounded border-2 border-zinc-700 peer-checked:bg-blue-600 peer-checked:border-blue-600 flex items-center justify-center transition-all shadow-sm">
-                  <svg className={`w-3.5 h-3.5 text-white ${useSearch ? 'opacity-100' : 'opacity-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="4"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <div className="w-6 h-6 rounded border-2 border-zinc-700 peer-checked:bg-blue-600 peer-checked:border-blue-600 flex items-center justify-center transition-all shadow-inner">
+                  <svg className={`w-4 h-4 text-white ${useSearch ? 'opacity-100' : 'opacity-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="4"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                 </div>
-                <span className="ml-3 text-[11px] font-black text-zinc-400 group-hover:text-zinc-200 uppercase tracking-tighter">🔍 FACT CHECK</span>
               </label>
-
-              {/* [수정] 3개 단락 글 유형 완벽 복구 */}
-              <div className="flex-1 flex items-center gap-3">
-                <span className="text-[10px] font-black text-zinc-500 uppercase shrink-0">유형</span>
-                <select 
-                  value={postType} 
-                  onChange={(e) => setPostType(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-[11px] font-bold text-zinc-300 outline-none focus:border-blue-600 appearance-none cursor-pointer"
-                >
-                  <optgroup label="1️⃣ 기본 및 도구">
-                    <option>AI 자동 포스팅</option>
-                    <option>AI 툴 및 웹 서비스 가이드</option>
-                    <option>유틸리티 (설치/방법)</option>
-                    <option>일반 정보성 포스팅</option>
-                  </optgroup>
-                  <optgroup label="2️⃣ 수익형 핵심 (고단가)">
-                    <option>생활 정책 및 정부 지원금</option>
-                    <option>금융 및 재테크</option>
-                    <option>기업 정보 및 주식 정보</option>
-                    <option>건강 정보 및 영양제 분석</option>
-                  </optgroup>
-                  <optgroup label="3️⃣ 리뷰 및 라이프 스타일">
-                    <option>일반 제품 리뷰</option>
-                    <option>자동차 모델 리뷰</option>
-                    <option>게임 리뷰 및 공략법</option>
-                  </optgroup>
-                </select>
-              </div>
-            </div>
-
-            {/* 하단: 말투 & 길이 & 생성 버튼 (가로 배치) */}
-            <div className="flex items-stretch gap-4">
-              <div className="flex-1 space-y-3">
-                {/* 말투 상세 설명 복구 */}
-                <div className="flex items-center gap-3">
-                  <span className="text-[9px] font-black text-zinc-600 uppercase shrink-0 w-8">Tone</span>
-                  <select value={tone} onChange={(e) => setTone(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-[10px] font-bold text-zinc-400 outline-none focus:border-blue-600">
-                    <option>친근하고 부드러운 말투 (블로그 후기, 일상)</option>
-                    <option>전문적이고 분석적인 말투 (경제, 기술, 정보전달)</option>
-                    <option>익살스럽고 재치있는 말투 (커뮤니티, SNS, 유머)</option>
-                    <option>비판적이고 날카로운 말투 (팩트체크, 비교 리뷰)</option>
-                    <option>감성적이고 따뜻한 말투 (에세이, 여행, 맛집)</option>
-                    <option>자신감 있고 설득력 있는 말투 (재테크, 투자 전망)</option>
-                  </select>
-                </div>
-                {/* 길이 상세 설명 복구 */}
-                <div className="flex items-center gap-3">
-                  <span className="text-[9px] font-black text-zinc-600 uppercase shrink-0 w-8">Size</span>
-                  <select value={length} onChange={(e) => setLength(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-[10px] font-bold text-zinc-400 outline-none focus:border-blue-600">
-                    <option>보통 (약 1,500자): 표준 블로그형 (일반 정보성)</option>
-                    <option>짧게 (약 800자): 핵심 요약형 (뉴스, 정보 전달)</option>
-                    <option>길게 (약 3,000자): SEO 상위 노출 공략용 (심층 분석)</option>
-                    <option>아주 길게 (약 5,000자): 가이드북/칼럼형 (주제 완벽 정복)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* [수정] 생성 버튼 한국어 복구 */}
-              <button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="w-40 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 text-white rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-lg shadow-blue-600/20 active:scale-95 group"
-              >
-                {loading ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} className="group-hover:scale-110 transition-transform" />}
-                <span className="text-[10px] font-black uppercase tracking-tighter">AI 콘텐츠 생성 시작</span>
-              </button>
             </div>
           </section>
 
-          {/* 3. 템플릿 선택 (잘림 없이 무한 스크롤 가능) */}
-          <section className="space-y-4 pt-6 border-t border-zinc-800/50 pb-20">
-            <div className="flex items-center gap-2">
-              <MousePointer2 size={14} className="text-emerald-500" />
-              <p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">글쓰기 템플릿 (클릭 시 자동 입력)</p>
+          {/* 3. 글 유형 (Type) 단독 박스 */}
+          <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 shadow-sm space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="text-[13px] font-black text-white flex items-center gap-2">
+                글 유형 (Type)
+              </label>
+              <Plus size={16} className="text-zinc-600" />
+            </div>
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+              <select 
+                value={postType} 
+                onChange={(e) => setPostType(e.target.value)}
+                className="w-full bg-transparent text-[11px] font-bold text-zinc-300 outline-none cursor-pointer appearance-none"
+              >
+                <optgroup label="1️⃣ 기본 및 도구"><option>AI 자동 포스팅</option><option>AI 툴 및 웹 서비스 가이드</option><option>유틸리티 (설치/방법)</option><option>일반 정보성 포스팅</option></optgroup>
+                <optgroup label="2️⃣ 수익형 핵심 (고단가)"><option>생활 정책 및 정부 지원금</option><option>금융 및 재테크</option><option>기업 정보 및 주식 정보</option><option>건강 정보 및 영양제 분석</option></optgroup>
+                <optgroup label="3️⃣ 리뷰 및 라이프 스타일"><option>일반 제품 리뷰</option><option>자동차 모델 리뷰</option><option>게임 리뷰 및 공략법</option></optgroup>
+              </select>
+            </div>
+          </section>
+
+          {/* 4. 말투 (Tone) 단독 박스 */}
+          <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 shadow-sm space-y-3 font-sans">
+            <label className="text-[13px] font-black text-white">말투 (Tone)</label>
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center">
+              <select value={tone} onChange={(e) => setTone(e.target.value)} className="w-full bg-transparent text-[11px] font-bold text-zinc-300 outline-none cursor-pointer appearance-none">
+                <option>친근하고 부드러운 말투 (블로그 후기, 일상)</option>
+                <option>전문적이고 분석적인 말투 (경제, 기술, 정보전달)</option>
+                <option>익살스럽고 재치있는 말투 (커뮤니티, SNS, 유머)</option>
+                <option>비판적이고 날카로운 말투 (팩트체크, 비교 리뷰)</option>
+                <option>감성적이고 따뜻한 말투 (에세이, 여행, 맛집)</option>
+                <option>자신감 있고 설득력 있는 말투 (재테크, 투자 전망)</option>
+              </select>
+              <Plus size={16} className="text-zinc-600" />
+            </div>
+          </section>
+
+          {/* 5. 길이 (Size) 단독 박스 */}
+          <section className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 shadow-sm space-y-3 font-sans">
+            <label className="text-[13px] font-black text-white">길이 (Size)</label>
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center">
+              <select value={length} onChange={(e) => setLength(e.target.value)} className="w-full bg-transparent text-[11px] font-bold text-zinc-300 outline-none cursor-pointer appearance-none">
+                <option>보통 (약 1,500자): 표준 블로그형 (일반 정보성)</option>
+                <option>짧게 (약 800자): 핵심 요약형 (뉴스, 정보 전달)</option>
+                <option>길게 (약 3,000자): SEO 상위 노출 공략용 (심층 분석)</option>
+                <option>아주 길게 (약 5,000자): 가이드북/칼럼형 (주제 완벽 정복)</option>
+              </select>
+              <Plus size={16} className="text-zinc-600" />
+            </div>
+          </section>
+
+         {/* 🌟 AI 콘텐츠 생성 시작 버튼 (파란색 유지 + 에메랄드 게이지) */}
+          <button
+            onClick={handleGenerate}
+            disabled={loading}
+            className="w-full h-16 bg-blue-600 hover:bg-blue-500 rounded-2xl relative overflow-hidden transition-all shadow-xl shadow-blue-900/40 active:scale-[0.98] disabled:opacity-80 group"
+          >
+            {/* ⚡ 차오르는 에메랄드 진행 바 */}
+            {loading && (
+              <div 
+                className="absolute left-0 top-0 h-full bg-emerald-400/40 transition-all duration-300 ease-out z-0 border-r-2 border-emerald-300 shadow-[2px_0_10px_rgba(52,211,153,0.5)]"
+                style={{ width: `${progress}%` }}
+              />
+            )}
+            
+            <div className="relative z-10 flex items-center justify-center gap-3">
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin text-white" size={24} />
+                  <span className="text-lg font-black text-white font-sans tracking-tight">{Math.round(progress)}% 포스팅 집필 중...</span>
+                </>
+              ) : (
+                <>
+                  <Zap size={24} className="fill-white" />
+                  <span className="text-lg font-black tracking-widest text-white font-sans">AI 콘텐츠 생성 시작</span>
+                </>
+              )}
+            </div>
+          </button>
+
+          {/* 7. 글쓰기 템플릿 안내 섹션 */}
+          <section className="pt-6 space-y-4 font-sans">
+            <div className="flex flex-col gap-1 px-1">
+              <p className="text-[14px] font-black text-white">글쓰기 템플릿</p>
+              <p className="text-[11px] font-bold text-zinc-500">- 클릭 시 주제(키워드)칸에 자동 입력됩니다.</p>
             </div>
             <div className="grid grid-cols-1 gap-2">
               {templates.map((text, idx) => (
                 <button
                   key={idx}
                   onClick={() => setTopic(text)}
-                  className="w-full text-left px-5 py-4 bg-zinc-900/40 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800/60 rounded-xl text-[11px] font-bold text-zinc-500 transition-all flex items-center justify-between group"
+                  className="w-full text-left px-5 py-4 bg-zinc-900/40 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800/60 rounded-xl text-[11px] font-bold text-zinc-400 transition-all flex items-center justify-between group"
                 >
-                  <span className="truncate group-hover:text-white transition-colors">{text}</span>
-                  <Plus size={14} className="text-zinc-800 group-hover:text-blue-500 shrink-0 ml-2" />
+                  <span className="truncate group-hover:text-white transition-colors font-sans">{text}</span>
+                  <Plus size={14} className="text-zinc-800 group-hover:text-blue-500 shrink-0 ml-2 font-sans" />
                 </button>
               ))}
             </div>
@@ -159,41 +204,129 @@ export default function CreateTab({
         </div>
       </div>
 
-      {/* --- [오른쪽] 결과 프리뷰 (55%) --- */}
-      <div className="w-[55%] flex flex-col bg-[#05070a] overflow-hidden">
-        {/* 상단 고정 툴바 (기존 기능 보존) */}
-        <div className="flex justify-between items-center px-10 py-6 border-b border-zinc-800/50 bg-[#05070a]/80 backdrop-blur-md z-10 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className={`w-2 h-2 rounded-full ${content ? 'bg-blue-500 animate-pulse' : 'bg-zinc-700'}`} />
-            <span className={`text-[10px] font-black uppercase tracking-widest ${content ? 'text-blue-500' : 'text-zinc-600'}`}>
-              {loading ? 'AI WRITING...' : content ? 'GENERATED CONTENT' : 'STUDIO READY'}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setIsPreviewOpen(true)} disabled={!content || loading} className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase">Preview</button>
-            <button onClick={handleCopy} disabled={!content || loading} className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase">Copy</button>
-            <button onClick={handleDownload} disabled={!content || loading} className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase">Save</button>
-            <button disabled={!content || loading} className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20"><Share2 size={12} className="text-emerald-500" /></button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
-          {!content && !loading ? (
-            <div className="h-full flex flex-col items-center justify-center text-zinc-800 animate-in fade-in">
-              <PenLine size={32} className="mb-4 opacity-10" />
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-20">Wait For Command</p>
-            </div>
-          ) : (
-            <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-20">
-              <div className="prose prose-invert prose-blue max-w-none prose-sm font-medium leading-relaxed font-sans">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* --- [오른쪽] 프리뷰 (마크다운 소스 모드, 편집기능 탑재) --- */}
+<div className="w-[55%] flex flex-col bg-[#05070a] overflow-hidden">
+  
+  {/* 상단 툴바 */}
+  <div className="flex justify-between items-center px-10 py-6 border-b border-zinc-800/50 bg-[#05070a]/80 backdrop-blur-md z-10 shrink-0">
+    <div className="flex items-center gap-3">
+      <div className={`w-2.5 h-2.5 rounded-full ${content ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-700'}`} />
+      <div className="flex flex-col text-left">
+        <span className="text-[9px] font-black text-zinc-500 uppercase">GENERATED CONTENT</span>
+        <span className={`text-[12px] font-black ${content ? 'text-cyan-400' : 'text-zinc-600'}`}>
+          {loading ? 'WRITING...' : isEditing ? 'EDITING...' : content ? 'COMPLETE' : 'Ready'}
+        </span>
       </div>
-      
-      {/* 미리보기 모달 생략 (기본 로직 유지) */}
+    </div>
+    
+    <div className="flex gap-2">
+      {/* 🌟 [추가] EDIT / SAVE 버튼 */}
+      <button 
+        onClick={() => setIsEditing(!isEditing)} 
+        disabled={!content || loading}
+        className={`px-5 py-2 rounded-lg text-[11px] font-black transition-all uppercase tracking-widest ${
+          isEditing 
+          ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
+          : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+        }`}
+      >
+        {isEditing ? 'Save' : 'Edit'}
+      </button>
+
+      <button onClick={() => setIsPreviewOpen(true)} disabled={!content || loading} className="px-5 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[11px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase tracking-widest">PREVIEW</button>
+      <button onClick={handleCopy} disabled={!content || loading} className="px-5 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase tracking-widest">COPY</button>
+      <button onClick={handleDownload} disabled={!content || loading} className="px-5 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] font-black text-zinc-400 hover:text-white transition-all disabled:opacity-20 uppercase tracking-widest">SAVE</button>
+    </div>
+  </div>
+
+{/* 오른쪽 프리뷰 영역 상단 고정 툴바 바로 밑에 추가 */}
+<div className="w-full h-1 bg-zinc-900 overflow-hidden shrink-0">
+  {loading && (
+    <div 
+      className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+      style={{ width: `${progress}%` }}
+    />
+  )}
+</div>
+
+{/* 🌟 [수정] 본문 영역: 타이핑 버그 완벽 해결 */}
+  <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-[#ffffff]/[0.02]">
+    {!content && !loading ? (
+      <div className="h-full flex flex-col items-center justify-center text-zinc-500">
+        <p className="text-[18px] font-black text-zinc-400 mb-2 tracking-tight italic">Preview Engine Ready</p>
+      </div>
+    ) : (
+      <div className="max-w-3xl mx-auto animate-in fade-in duration-500 pb-20">
+        {isEditing ? (
+          /* 🌟 [최종 해결] 타이핑해도 커서 안 튕기고 글자도 잘 들어갑니다. */
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => {
+              const start = e.target.selectionStart;
+              const end = e.target.selectionEnd;
+              
+              if (typeof setContent === 'function') {
+                setContent(e.target.value);
+              }
+
+              // 🌟 타이핑 직후 커서 위치를 강제로 보존하는 브라우저 보정 로직
+              setTimeout(() => {
+                if (textareaRef.current) {
+                  textareaRef.current.setSelectionRange(start, end);
+                }
+              }, 0);
+            }}
+            className="w-full min-h-[70vh] bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8 text-zinc-300 font-mono text-[14px] leading-[2.2] focus:outline-none focus:border-emerald-500/50 transition-all custom-scrollbar resize-none font-sans"
+          />
+        ) : (
+          /* 보기 모드: 마크다운 소스 원문 출력 */
+          <pre className="text-zinc-300 font-mono text-[14px] leading-[2.2] whitespace-pre-wrap break-words font-sans">
+            {content}
+          </pre>
+        )}
+      </div>
+    )}
+  </div>
+</div>
+
+      {/* 미리보기 모달 (사장님 오리지널 스타일 완벽 보존) */}
+      {isPreviewOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300 font-sans">
+          <div className="bg-white text-zinc-900 w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-[40px] shadow-2xl flex flex-col relative animate-in zoom-in duration-300 font-sans">
+            <div className="px-10 py-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/80 font-sans">
+              <div className="flex items-center gap-6">
+                <div className="flex gap-2"><div className="w-3 h-3 rounded-full bg-[#FF5F57]" /><div className="w-3 h-3 rounded-full bg-[#FFBD2E]" /><div className="w-3 h-3 rounded-full bg-[#28C840]" /></div>
+                <span className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] font-sans">Browser Preview Mode</span>
+              </div>
+              <button onClick={() => setIsPreviewOpen(false)} className="p-2 hover:bg-zinc-200 rounded-full transition-all active:scale-90 font-sans"><X size={24} /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-12 lg:p-24 bg-white custom-scrollbar font-sans font-sans">
+              <article className="max-w-3xl mx-auto font-sans font-sans">
+                <h1 className="text-5xl font-black mb-16 leading-tight tracking-tighter text-black border-b-8 border-blue-500/10 pb-8 italic font-sans font-sans font-sans">{topic || "포스팅 제목"}</h1>
+                <div className="markdown-content leading-[2.1] text-zinc-800 font-medium font-sans font-sans">
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      table: ({node, ...props}) => (<div className="my-10 w-full overflow-hidden rounded-xl border border-zinc-200 shadow-sm font-sans font-sans"><table className="w-full text-sm text-left border-collapse font-sans font-sans" {...props} /></div>),
+                      thead: ({node, ...props}) => <thead className="bg-zinc-50 border-b border-zinc-200 font-sans font-sans" {...props} />,
+                      th: ({node, ...props}) => <th className="px-5 py-4 font-black text-zinc-700 border-r border-zinc-200 last:border-0 font-sans font-sans font-sans" {...props} />,
+                      td: ({node, ...props}) => <td className="px-5 py-4 border-t border-zinc-100 border-r border-zinc-200 last:border-0 font-sans font-sans font-sans font-sans" {...props} />,
+                      h2: ({node, ...props}) => <h2 className="border-l-8 border-blue-500 pl-6 text-2xl font-black tracking-tight mt-16 mb-8 text-black uppercase italic font-sans font-sans" {...props} />,
+                      p: ({node, ...props}) => <p className="mb-6 font-sans font-sans font-sans font-sans font-sans font-sans" {...props} />,
+                    }}
+                  >
+                    {content}
+                  </ReactMarkdown>
+                </div>
+              </article>
+            </div>
+            <div className="px-10 py-8 border-t border-zinc-100 bg-zinc-50/50 flex justify-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+              <button onClick={() => setIsPreviewOpen(false)} className="px-14 py-4 bg-black text-white text-xs font-black rounded-2xl hover:bg-zinc-800 transition-all uppercase tracking-[0.3em] shadow-xl active:scale-95 font-sans font-sans font-sans font-sans font-sans font-sans">Close Preview</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
