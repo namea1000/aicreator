@@ -58,7 +58,7 @@ export default function MainLandingPage() {
             className="text-2xl font-black italic tracking-tighter text-blue-500 uppercase cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => { setIsStudioActive(false); setStudioViewMode('Studio'); }}
           >
-            CREBOX.AI
+            CreAiBox
           </div>
         </div>
         
